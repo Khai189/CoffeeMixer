@@ -40,6 +40,7 @@ export async function loader({ request }: Route.LoaderArgs) {
         { name: { contains: searchQuery, mode: "insensitive" } },
         { description: { contains: searchQuery, mode: "insensitive" } },
         { brewMethod: { contains: searchQuery, mode: "insensitive" } },
+        { difficulty: { contains: searchQuery, mode: "insensitive" } },
         { ingredients: { has: searchQuery } },
       ],
     };
@@ -115,7 +116,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       {/* Hero */}
       <section className="text-center mb-8 sm:mb-12" aria-labelledby="hero-heading">
         <h1 id="hero-heading" className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3">
-          Discover Your Perfect Brew <span aria-hidden="true">☕</span>
+          Discover Your Perfect Brew
         </h1>
         <p className="text-base sm:text-lg text-gray-500 dark:text-gray-400 max-w-xl mx-auto px-4 mb-6">
           Explore coffee recipes, share your custom mixes, and get personalized
@@ -160,8 +161,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             )}
           </div>
         </Form>
-      </section>      {/* For You / Trending Section */}
-      {recommendations.length > 0 && (
+      </section>      {/* For You / Trending Section - Hide when searching */}
+      {!searchQuery && recommendations.length > 0 && (
         <section className="mb-8 sm:mb-12" aria-labelledby="recommendations-heading">
           <div className="flex items-center justify-between mb-4">
             <h2 id="recommendations-heading" className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
