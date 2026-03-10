@@ -21,7 +21,9 @@ model User {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   profile         Profile?
+  recipes         Recipe[]
   savedRecipes    SavedRecipe[]
+  likes           Like[]
 }
 
 model Profile {
@@ -44,7 +46,10 @@ model Recipe {
   brewMethod      String
   difficulty      String   @default("medium")
   createdAt       DateTime @default(now())
+  authorId        String?
+  author          User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
   savedBy         SavedRecipe[]
+  likes           Like[]
 }
 
 model SavedRecipe {
@@ -54,6 +59,17 @@ model SavedRecipe {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   savedAt   DateTime @default(now())
+
+  @@unique([userId, recipeId])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  recipeId  String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 
   @@unique([userId, recipeId])
 }
