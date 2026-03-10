@@ -67,7 +67,7 @@ export default function SignupPage() {
                 {/* Form */}
                 <Form method="post" className="space-y-5">
                     {actionData?.error && (
-                        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400 text-sm">
+                        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400 text-sm" role="alert">
                             {actionData.error}
                         </div>
                     )}

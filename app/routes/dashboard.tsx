@@ -68,58 +68,77 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
     const { userName, savedRecipes, myRecipes, userLikes, userSaves, stats } = loaderData;
 
     return (
-        <div className="max-w-5xl mx-auto px-4 py-8 space-y-10">
-            {/* Greeting */}
-            <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                    Welcome back, {userName} ☕
-                </h1>
-                <p className="text-gray-500 dark:text-gray-400 mt-1">Here's what's brewing in your world.</p>
+        <main className="max-w-5xl mx-auto px-4 py-8 space-y-10">
+            {/* Greeting + Create CTA */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                        Welcome back, {userName} <span aria-hidden="true">☕</span>
+                    </h1>
+                    <p className="text-gray-500 dark:text-gray-400 mt-1">Here's what's brewing in your world.</p>
+                </div>
+                <Link
+                    to="/recipe/new"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-amber-600 text-white font-semibold hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950 shadow-md hover:shadow-lg transition-all text-sm sm:text-base"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5" aria-hidden="true">
+                        <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+                    </svg>
+                    Create Recipe
+                </Link>
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 text-center">
-                    <p className="text-3xl font-bold text-amber-600">{stats.recipes}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Recipes Created</p>
+            <section aria-labelledby="stats-heading">
+                <h2 id="stats-heading" className="sr-only">Your stats</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 text-center">
+                        <p className="text-3xl font-bold text-amber-600" aria-label={`${stats.recipes} recipes created`}>{stats.recipes}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Recipes Created</p>
+                    </div>
+                    <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 text-center">
+                        <p className="text-3xl font-bold text-red-500" aria-label={`${stats.likes} recipes liked`}>{stats.likes}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Recipes Liked</p>
+                    </div>
+                    <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 text-center">
+                        <p className="text-3xl font-bold text-blue-500" aria-label={`${stats.saved} recipes saved`}>{stats.saved}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Recipes Saved</p>
+                    </div>
                 </div>
-                <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 text-center">
-                    <p className="text-3xl font-bold text-red-500">{stats.likes}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Recipes Liked</p>
-                </div>
-                <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 text-center">
-                    <p className="text-3xl font-bold text-blue-500">{stats.saved}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Recipes Saved</p>
-                </div>
-            </div>
+            </section>
 
             {/* Quick Actions */}
-            <div className="flex gap-3">
-                <Link
-                    to="/recipe/new"
-                    className="px-5 py-2.5 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-700 transition-colors"
-                >
-                    + Create Recipe
-                </Link>
+            <div className="flex flex-wrap gap-3" role="group" aria-label="Quick actions">
                 <Link
                     to="/"
-                    className="px-5 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                    className="px-5 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950 transition-colors"
                 >
                     Browse Feed
+                </Link>
+                <Link
+                    to="/profile"
+                    className="px-5 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950 transition-colors"
+                >
+                    Edit Preferences
                 </Link>
             </div>
 
             {/* Saved Recipes */}
-            <section>
+            <section aria-labelledby="saved-heading">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">🔖 Saved Recipes</h2>
+                    <h2 id="saved-heading" className="text-xl font-semibold text-gray-800 dark:text-gray-200">
+                        <span aria-hidden="true">🔖</span> Saved Recipes
+                    </h2>
                     {stats.saved > 4 && (
                         <span className="text-sm text-gray-500">Showing latest 4 of {stats.saved}</span>
                     )}
                 </div>
                 {savedRecipes.length === 0 ? (
                     <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center">
-                        <p className="text-gray-500 dark:text-gray-400">No saved recipes yet. Browse the feed and bookmark ones you love!</p>
+                        <p className="text-gray-500 dark:text-gray-400">No saved recipes yet.</p>
+                        <Link to="/" className="mt-3 inline-block text-amber-600 hover:text-amber-700 focus:outline-none focus:underline font-medium">
+                            Browse the feed and bookmark ones you love →
+                        </Link>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -143,9 +162,11 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
             </section>
 
             {/* My Recipes */}
-            <section>
+            <section aria-labelledby="my-recipes-heading">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">📝 My Recipes</h2>
+                    <h2 id="my-recipes-heading" className="text-xl font-semibold text-gray-800 dark:text-gray-200">
+                        <span aria-hidden="true">📝</span> My Recipes
+                    </h2>
                     {stats.recipes > 4 && (
                         <span className="text-sm text-gray-500">Showing latest 4 of {stats.recipes}</span>
                     )}
@@ -153,7 +174,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
                 {myRecipes.length === 0 ? (
                     <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center">
                         <p className="text-gray-500 dark:text-gray-400">You haven't created any recipes yet.</p>
-                        <Link to="/recipe/new" className="mt-3 inline-block text-amber-600 hover:text-amber-700 font-medium">
+                        <Link to="/recipe/new" className="mt-3 inline-block text-amber-600 hover:text-amber-700 focus:outline-none focus:underline font-medium">
                             Create your first recipe →
                         </Link>
                     </div>
@@ -177,6 +198,6 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
                     </div>
                 )}
             </section>
-        </div>
+        </main>
     );
 }

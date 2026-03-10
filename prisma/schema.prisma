@@ -24,6 +24,7 @@ model User {
   recipes         Recipe[]
   savedRecipes    SavedRecipe[]
   likes           Like[]
+  posts           Post[]
 }
 
 model Profile {
@@ -45,6 +46,7 @@ model Recipe {
   instructions    String
   brewMethod      String
   difficulty      String   @default("medium")
+  imageUrl        String?
   createdAt       DateTime @default(now())
   authorId        String?
   author          User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
@@ -72,4 +74,13 @@ model Like {
   createdAt DateTime @default(now())
 
   @@unique([userId, recipeId])
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  body      String
+  imageUrl  String?
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 }

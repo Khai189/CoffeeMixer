@@ -105,11 +105,11 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const { recipes, userLikes, userSaves, filter } = loaderData;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <main className="max-w-5xl mx-auto px-4 py-8">
       {/* Hero */}
-      <section className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3">
-          Discover Your Perfect Brew ☕
+      <section className="text-center mb-12" aria-labelledby="hero-heading">
+        <h1 id="hero-heading" className="text-4xl font-bold text-gray-900 dark:text-white mb-3">
+          Discover Your Perfect Brew <span aria-hidden="true">☕</span>
         </h1>
         <p className="text-lg text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
           Explore coffee recipes, share your custom mixes, and get personalized
@@ -118,58 +118,62 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       </section>
 
       {/* Filter tabs */}
-      <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2">
+      <nav className="flex items-center gap-2 mb-8 overflow-x-auto pb-2" aria-label="Recipe filters">
         {filterTabs.map((tab) => {
           const isActive = filter === tab.value;
           return (
             <a
               key={tab.value}
               href={tab.value === "all" ? "/" : `/?filter=${tab.value}`}
-              className={`px-4 py-2 text-sm font-medium rounded-full transition-colors ${
+              className={`px-4 py-2 text-sm font-medium rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950 ${
                 isActive
                   ? "bg-amber-600 text-white"
                   : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
               }`}
+              aria-current={isActive ? "page" : undefined}
             >
               {tab.label}
             </a>
           );
         })}
-      </div>
+      </nav>
 
       {/* Feed */}
       {recipes.length === 0 ? (
         <div className="text-center py-16">
-          <p className="text-5xl mb-4">☕</p>
+          <p className="text-5xl mb-4" aria-hidden="true">☕</p>
           <p className="text-gray-500 dark:text-gray-400 text-lg">
             No recipes found for this filter.
           </p>
           <a
             href="/"
-            className="mt-4 inline-block text-amber-600 hover:text-amber-700 font-medium"
+            className="mt-4 inline-block text-amber-600 hover:text-amber-700 focus:outline-none focus:underline font-medium"
           >
             View all recipes →
           </a>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {recipes.map((recipe) => (
-            <CoffeeCard
-              key={recipe.id}
-              id={recipe.id}
-              name={recipe.name}
-              description={recipe.description || ""}
-              brewMethod={recipe.brewMethod}
-              difficulty={recipe.difficulty as "easy" | "medium" | "hard"}
-              ingredients={recipe.ingredients}
-              author={recipe.author?.name || "CoffeeMixer"}
-              likes={recipe._count.likes}
-              liked={userLikes.includes(recipe.id)}
-              saved={userSaves.includes(recipe.id)}
-            />
-          ))}
-        </div>
+        <section aria-label={`${recipes.length} recipes`}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {recipes.map((recipe) => (
+              <CoffeeCard
+                key={recipe.id}
+                id={recipe.id}
+                name={recipe.name}
+                description={recipe.description || ""}
+                brewMethod={recipe.brewMethod}
+                difficulty={recipe.difficulty as "easy" | "medium" | "hard"}
+                ingredients={recipe.ingredients}
+                author={recipe.author?.name || "CoffeeMixer"}
+                likes={recipe._count.likes}
+                liked={userLikes.includes(recipe.id)}
+                saved={userSaves.includes(recipe.id)}
+                imageUrl={recipe.imageUrl}
+              />
+            ))}
+          </div>
+        </section>
       )}
-    </div>
+    </main>
   );
 }
