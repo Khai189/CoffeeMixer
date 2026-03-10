@@ -47,6 +47,31 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {children}
         <ScrollRestoration />
         <Scripts />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if (typeof window !== 'undefined') {
+                window.addEventListener('load', () => {
+                  setTimeout(() => {
+                    const perf = performance.getEntriesByType('navigation')[0];
+                    if (perf) {
+                      console.log('🚀 Browser Performance:', {
+                        'DNS': Math.round(perf.domainLookupEnd - perf.domainLookupStart) + 'ms',
+                        'TCP': Math.round(perf.connectEnd - perf.connectStart) + 'ms',
+                        'TTFB': Math.round(perf.responseStart - perf.requestStart) + 'ms',
+                        'Download': Math.round(perf.responseEnd - perf.responseStart) + 'ms',
+                        'DOM Parse': Math.round(perf.domContentLoadedEventEnd - perf.responseEnd) + 'ms',
+                        'Resource Load': Math.round(perf.loadEventStart - perf.domContentLoadedEventEnd) + 'ms',
+                        'Total': Math.round(perf.loadEventEnd - perf.fetchStart) + 'ms',
+                        'DOM Interactive': Math.round(perf.domInteractive - perf.fetchStart) + 'ms',
+                      });
+                    }
+                  }, 100);
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );

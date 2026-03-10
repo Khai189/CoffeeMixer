@@ -68,18 +68,18 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
     const { userName, savedRecipes, myRecipes, userLikes, userSaves, stats } = loaderData;
 
     return (
-        <main className="max-w-5xl mx-auto px-4 py-8 space-y-10">
+        <main className="max-w-5xl mx-auto px-4 py-6 sm:py-8 space-y-8 sm:space-y-10">
             {/* Greeting + Create CTA */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
                         Welcome back, {userName} <span aria-hidden="true">☕</span>
                     </h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-1">Here's what's brewing in your world.</p>
+                    <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mt-1">Here's what's brewing in your world.</p>
                 </div>
                 <Link
                     to="/recipe/new"
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-amber-600 text-white font-semibold hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950 shadow-md hover:shadow-lg transition-all text-sm sm:text-base"
+                    className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-amber-600 text-white font-semibold hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950 shadow-md hover:shadow-lg transition-all text-sm sm:text-base w-full sm:w-auto"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5" aria-hidden="true">
                         <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />

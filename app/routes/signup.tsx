@@ -51,8 +51,8 @@ export default function SignupPage() {
     const isSubmitting = navigation.state === "submitting";
 
     return (
-        <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4">
-            <div className="w-full max-w-sm space-y-8">
+        <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4 py-12">
+            <div className="w-full max-w-sm space-y-8 relative z-10">
                 {/* Header */}
                 <div className="text-center">
                     <span className="text-5xl">☕</span>
@@ -135,7 +135,8 @@ export default function SignupPage() {
                     <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="w-full py-2.5 px-4 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-700 focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:opacity-50 transition-all"
+                        className="w-full py-2.5 px-4 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-950 disabled:opacity-50 disabled:cursor-not-allowed transition-colors relative z-50"
+                        style={{ pointerEvents: 'auto' }}
                     >
                         {isSubmitting ? "Creating account..." : "Sign Up"}
                     </button>

@@ -2,6 +2,10 @@ import type { Route } from "./+types/new-recipe";
 import { prisma } from "../lib/db.server";
 import { requireUserId } from "../lib/session.server";
 import { redirect, Form, useNavigation, useActionData } from "react-router";
+import { writeFile, mkdir } from "fs/promises";
+import { join } from "path";
+import { useState } from "react";
+import ImageCropModal from "../components/ImageCropModal";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -25,7 +29,36 @@ export async function action({ request }: Route.ActionArgs) {
     const difficulty = formData.get("difficulty") as string;
     const ingredientsRaw = (formData.get("ingredients") as string)?.trim();
     const instructions = (formData.get("instructions") as string)?.trim();
-    const imageUrl = (formData.get("imageUrl") as string)?.trim() || null;
+    const imageFile = formData.get("image") as File | null;
+
+    let imageUrl: string | null = null;
+
+    // Handle image upload
+    if (imageFile && imageFile.size > 0) {
+        const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+        if (!allowedTypes.includes(imageFile.type)) {
+            return { errors: { image: "Only JPEG, PNG, WebP, and GIF images are allowed" } };
+        }
+        if (imageFile.size > 5 * 1024 * 1024) { // 5MB limit
+            return { errors: { image: "Image must be smaller than 5MB" } };
+        }
+
+        // Generate unique filename
+        const ext = imageFile.name.split(".").pop();
+        const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        
+        // Ensure uploads directory exists
+        const uploadsDir = join(process.cwd(), "public", "uploads");
+        await mkdir(uploadsDir, { recursive: true });
+        
+        // Write file to disk
+        const filepath = join(uploadsDir, filename);
+        const arrayBuffer = await imageFile.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        await writeFile(filepath, buffer);
+
+        imageUrl = `/uploads/${filename}`;
+    }
 
     const errors: Record<string, string> = {};
     if (!name) errors.name = "Recipe name is required";
@@ -69,6 +102,69 @@ export default function NewRecipe({ actionData }: Route.ComponentProps) {
     const navigation = useNavigation();
     const isSubmitting = navigation.state === "submitting";
     const errors = actionData?.errors as Record<string, string> | undefined;
+    
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [showCropModal, setShowCropModal] = useState(false);
+    const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setSelectedFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result as string);
+                setShowCropModal(true);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleCropComplete = (blob: Blob) => {
+        setCroppedBlob(blob);
+        setShowCropModal(false);
+        
+        // Create preview for cropped image
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(blob);
+    };
+
+    const handleCropCancel = () => {
+        setShowCropModal(false);
+        setImagePreview(null);
+        setSelectedFile(null);
+        setCroppedBlob(null);
+    };
+
+    const handleRemoveImage = () => {
+        setImagePreview(null);
+        setSelectedFile(null);
+        setCroppedBlob(null);
+        // Reset the file input
+        const fileInput = document.getElementById("image") as HTMLInputElement;
+        if (fileInput) fileInput.value = "";
+    };
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const form = e.currentTarget;
+        const formData = new FormData(form);
+
+        // If we have a cropped image, replace the original file with it
+        if (croppedBlob && selectedFile) {
+            const croppedFile = new File([croppedBlob], selectedFile.name, {
+                type: selectedFile.type,
+            });
+            formData.set("image", croppedFile);
+        }
+
+        // Submit the form manually
+        form.submit();
+    };
 
     return (
         <div className="max-w-2xl mx-auto px-4 py-8">
@@ -79,7 +175,7 @@ export default function NewRecipe({ actionData }: Route.ComponentProps) {
                 Share your custom coffee creation with the CoffeeMixer community.
             </p>
 
-            <Form method="post" className="space-y-6">
+            <Form method="post" encType="multipart/form-data" className="space-y-6" onSubmit={handleSubmit}>
                 {/* Name */}
                 <div className="space-y-1">
                     <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -109,18 +205,47 @@ export default function NewRecipe({ actionData }: Route.ComponentProps) {
                     />
                 </div>
 
-                {/* Image URL */}
+                {/* Image Preview */}
+                {imagePreview && !showCropModal && (
+                    <div className="relative rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                        <img
+                            src={imagePreview}
+                            alt="Recipe preview"
+                            className="w-full h-64 object-cover"
+                        />
+                        <div className="absolute top-2 right-2 flex gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setShowCropModal(true)}
+                                className="px-3 py-1.5 bg-gray-900 bg-opacity-75 text-white text-sm rounded-lg hover:bg-opacity-90 transition-opacity"
+                            >
+                                ✂️ Crop
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleRemoveImage}
+                                className="px-3 py-1.5 bg-red-600 bg-opacity-75 text-white text-sm rounded-lg hover:bg-opacity-90 transition-opacity"
+                            >
+                                ✕ Remove
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Image Upload */}
                 <div className="space-y-1">
-                    <label htmlFor="imageUrl" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Image URL <span className="text-gray-400 font-normal">(optional)</span>
+                    <label htmlFor="image" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Recipe Image <span className="text-gray-400 font-normal">(optional, max 5MB)</span>
                     </label>
                     <input
-                        id="imageUrl"
-                        name="imageUrl"
-                        type="url"
-                        placeholder="https://example.com/my-coffee.jpg"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
+                        id="image"
+                        name="image"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        onChange={handleFileSelect}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 dark:file:bg-amber-950 dark:file:text-amber-300"
                     />
+                    {errors?.image && <p className="text-sm text-red-500">{errors.image}</p>}
                 </div>
 
                 {/* Brew Method + Difficulty */}
@@ -197,6 +322,16 @@ export default function NewRecipe({ actionData }: Route.ComponentProps) {
                     {isSubmitting ? "Creating..." : "Publish Recipe ☕"}
                 </button>
             </Form>
+
+            {/* Crop Modal */}
+            {showCropModal && imagePreview && (
+                <ImageCropModal
+                    imageUrl={imagePreview}
+                    onComplete={handleCropComplete}
+                    onCancel={handleCropCancel}
+                    aspectRatio={4 / 3}
+                />
+            )}
         </div>
     );
 }
