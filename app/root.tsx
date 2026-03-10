@@ -8,6 +8,9 @@ import {
 } from "react-router";
 
 import type { Route } from "./+types/root";
+import Navbar from "./components/Navbar";
+import { getUserId } from "./lib/session.server";
+import { getUserById } from "./lib/auth.server";
 import "./app.css";
 
 export const links: Route.LinksFunction = () => [
@@ -22,6 +25,14 @@ export const links: Route.LinksFunction = () => [
     href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
   },
 ];
+
+// Root loader — runs on every page, provides user data to the whole app
+export async function loader({ request }: Route.LoaderArgs) {
+  const userId = await getUserId(request);
+  if (!userId) return { user: null };
+  const user = await getUserById(userId);
+  return { user };
+}
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -41,8 +52,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function App() {
-  return <Outlet />;
+export default function App({ loaderData }: Route.ComponentProps) {
+  return (
+    <>
+      <Navbar user={loaderData.user} />
+      <Outlet />
+    </>
+  );
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
