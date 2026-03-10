@@ -1,7 +1,8 @@
 import type { Route } from "./+types/profile";
 import { prisma } from "../lib/db.server";
 import { requireUserId } from "../lib/session.server";
-import { redirect, Form, useNavigation } from "react-router";
+import { redirect, Form, useNavigation, useFetcher } from "react-router";
+import { useState } from "react";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -59,27 +60,26 @@ export async function action({ request }: Route.ActionArgs) {
     const sweetnessLevel = Number(formData.get("sweetnessLevel"));
     const strengthLevel = Number(formData.get("strengthLevel"));
 
-    // Update user name and email
     await prisma.user.update({
         where: { id: userId },
         data: { name, email },
     });
 
-    // Update or create profile
     await prisma.profile.upsert({
         where: { userId },
         update: { favoriteDrink, brewMethod, milkPreference, sweetnessLevel, strengthLevel },
         create: { userId, favoriteDrink, brewMethod, milkPreference, sweetnessLevel, strengthLevel },
     });
 
-    return redirect("/profile");
+    return { success: true };
 }
 
-const brewMethods = ["Espresso", "French Press", "Pour Over", "Cold Brew", "AeroPress", "Moka Pot"];
-const milkOptions = ["None", "Whole Milk", "Oat Milk", "Almond Milk", "Soy Milk", "Coconut Milk"];
-
-export default function ProfilePage({ loaderData }: Route.ComponentProps) {
-    const { user, profile, stats } = loaderData;
+const brewMethods = [
+    { value: "Espresso", emoji: "☕", label: "Espresso" },
+    { value: "French Press", emoji: "🫖", label: "French Press" },
+    { value: "Pour Over", emoji: "💧", label: "Pour Over" },
+    { value: "Cold Brew", emoji: "🧊", label: "Cold Brew" },
+    { value: "AeroPress", emoji: "🔄", label: "AeroPress" },
     const navigation = useNavigation();
     const isSaving = navigation.state === "submitting";
 

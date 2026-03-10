@@ -13,7 +13,6 @@ declare global {
     var __prisma: PrismaClient | undefined;
 }
 
-// Prevent multiple instances in development (hot reload creates new connections)
 if (process.env.NODE_ENV === "production") {
     prisma = createPrismaClient();
 } else {
