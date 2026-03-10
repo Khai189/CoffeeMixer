@@ -155,6 +155,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
                                 likes={recipe._count.likes}
                                 liked={userLikes.includes(recipe.id)}
                                 saved={userSaves.includes(recipe.id)}
+                                imageUrl={recipe.imageUrl}
                             />
                         ))}
                     </div>
@@ -193,6 +194,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
                                 likes={recipe._count.likes}
                                 liked={userLikes.includes(recipe.id)}
                                 saved={userSaves.includes(recipe.id)}
+                                imageUrl={recipe.imageUrl}
                             />
                         ))}
                     </div>

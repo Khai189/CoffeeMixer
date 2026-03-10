@@ -25,6 +25,7 @@ export async function action({ request }: Route.ActionArgs) {
     const difficulty = formData.get("difficulty") as string;
     const ingredientsRaw = (formData.get("ingredients") as string)?.trim();
     const instructions = (formData.get("instructions") as string)?.trim();
+    const imageUrl = (formData.get("imageUrl") as string)?.trim() || null;
 
     const errors: Record<string, string> = {};
     if (!name) errors.name = "Recipe name is required";
@@ -49,6 +50,7 @@ export async function action({ request }: Route.ActionArgs) {
             difficulty: difficulty || "medium",
             ingredients,
             instructions,
+            imageUrl,
             authorId: userId,
         },
     });
@@ -104,6 +106,20 @@ export default function NewRecipe({ actionData }: Route.ComponentProps) {
                         rows={3}
                         placeholder="What makes this recipe special?"
                         className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none resize-none"
+                    />
+                </div>
+
+                {/* Image URL */}
+                <div className="space-y-1">
+                    <label htmlFor="imageUrl" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Image URL <span className="text-gray-400 font-normal">(optional)</span>
+                    </label>
+                    <input
+                        id="imageUrl"
+                        name="imageUrl"
+                        type="url"
+                        placeholder="https://example.com/my-coffee.jpg"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
                     />
                 </div>
 
