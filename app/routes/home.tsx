@@ -1,7 +1,7 @@
 import type { Route } from "./+types/home";
 import { prisma } from "../lib/db.server";
 import { getUserId } from "../lib/session.server";
-import { redirect, useSearchParams, Form, useNavigation } from "react-router";
+import { redirect, Form, useNavigation } from "react-router";
 import CoffeeCard from "../components/CoffeeCard";
 
 export function meta({}: Route.MetaArgs) {

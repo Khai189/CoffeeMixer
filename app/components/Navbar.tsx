@@ -35,6 +35,11 @@ export default function Navbar({ user }: NavbarProps) {
                     <Link to="/dashboard" className={`transition-colors ${isActive("/dashboard")}`}>
                         Dashboard
                     </Link>
+                    {user && (
+                        <Link to="/recipe/new" className={`transition-colors ${isActive("/recipe/new")}`}>
+                            + Create
+                        </Link>
+                    )}
                 </div>
 
                 {/* Right side — Auth */}

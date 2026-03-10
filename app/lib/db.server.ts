@@ -2,8 +2,8 @@ import { PrismaClient } from "../../generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 function createPrismaClient() {
-    const connectionString = process.env.DIRECT_DATABASE_URL || process.env.DATABASE_URL!;
-    const adapter = new PrismaPg({ connectionString });
+    const connectionString = process.env.DIRECT_DATABASE_URL!;
+    const adapter = new PrismaPg({ connectionString, max: 10 });
     return new PrismaClient({ adapter });
 }
 
