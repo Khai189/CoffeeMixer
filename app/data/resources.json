@@ -1,0 +1,177 @@
+{
+    "version": "1.0.0",
+    "app": {
+        "name": "CoffeeMixer",
+        "defaultLocale": "en-US",
+        "supportedLocales": [
+            "en-US",
+            "es-ES",
+            "fr-FR",
+            "de-DE",
+            "zh-CN" 
+        ]
+    },
+    "strings": {
+        "en-US": {
+            "welcome": "Welcome to CoffeeMixer",
+            "addRecipe": "Add Recipe",
+            "editRecipe": "Edit Recipe",
+            "deleteRecipe": "Delete Recipe",
+            "settings": "Settings"
+        },
+        "es-ES": {
+            "welcome": "Bienvenido a CoffeeMixer",
+            "addRecipe": "Agregar receta",
+            "editRecipe": "Editar receta",
+            "deleteRecipe": "Eliminar receta",
+            "settings": "Ajustes"
+        },
+        "fr-FR": {
+            "welcome": "Bienvenue sur CoffeeMixer",
+            "addRecipe": "Ajouter une recette",
+            "editRecipe": "Modifier la recette",
+            "deleteRecipe": "Supprimer la recette",
+            "settings": "Paramètres"
+        },
+        "de-DE": {
+            "welcome": "Willkommen bei CoffeeMixer",
+            "addRecipe": "Rezept hinzufügen",
+            "editRecipe": "Rezept bearbeiten",
+            "deleteRecipe": "Rezept löschen",
+            "settings": "Einstellungen"
+        },
+        "zh-CN": {
+            "welcome": "欢迎使用 CoffeeMixer",
+            "addRecipe": "添加食谱",
+            "editRecipe": "编辑食谱",
+            "deleteRecipe": "删除食谱",
+            "settings": "设置"
+        }
+    },
+    "assets": [
+        {
+            "id": "logo",
+            "type": "image",
+            "path": "assets/images/logo.png",
+            "description": "Application logo"
+        },
+        {
+            "id": "defaultBean",
+            "type": "image",
+            "path": "assets/images/beans/default.jpg",
+            "description": "Default coffee bean photo"
+        }
+    ],
+    "units": {
+        "weight": "g",
+        "volume": "ml",
+        "temperature": "°C",
+        "ratio": "coffee:water"
+    },
+    "recipes": [
+        {
+            "id": "espresso-001",
+            "name": "Classic Espresso",
+            "description": "A balanced single shot espresso.",
+            "servings": 1,
+            "coffee": {
+                "dose": 18,
+                "unit": "g",
+                "grind": "fine",
+                "beanId": "colombia-huila"
+            },
+            "water": {
+                "yield": 36,
+                "unit": "g",
+                "temperature": 94
+            },
+            "brewTime": "25-30s",
+            "ratio": "1:2",
+            "steps": [
+                "Preheat portafilter and cup",
+                "Tamp evenly with 30 lb pressure",
+                "Brew until specified yield is reached"
+            ],
+            "tags": [
+                "espresso",
+                "short"
+            ]
+        },
+        {
+            "id": "pour-over-001",
+            "name": "Pour Over (V60)",
+            "description": "Clean, bright pour over with a floral profile.",
+            "servings": 1,
+            "coffee": {
+                "dose": 16,
+                "unit": "g",
+                "grind": "medium-fine",
+                "beanId": "ethiopia-yirgacheffe"
+            },
+            "water": {
+                "total": 240,
+                "unit": "ml",
+                "temperature": 92
+            },
+            "brewTime": "2:30 - 3:00",
+            "ratio": "1:15",
+            "steps": [
+                "Rinse filter and preheat dripper",
+                "Add coffee, level bed, bloom with 40ml water for 30s",
+                "Pour remaining water slowly in concentric circles",
+                "Allow drawdown to finish around 2:30-3:00"
+            ],
+            "tags": [
+                "pour-over",
+                "v60"
+            ]
+        }
+    ],
+    "ingredients": [
+        {
+            "id": "colombia-huila",
+            "name": "Colombian Huila",
+            "origin": "Colombia",
+            "roast": "Medium",
+            "tastingNotes": [
+                "chocolate",
+                "caramel",
+                "red apple"
+            ]
+        },
+        {
+            "id": "ethiopia-yirgacheffe",
+            "name": "Ethiopia Yirgacheffe",
+            "origin": "Ethiopia",
+            "roast": "Light",
+            "tastingNotes": [
+                "jasmine",
+                "lemon",
+                "tea-like"
+            ]
+        }
+    ],
+    "themes": {
+        "light": {
+            "primary": "#6B4F3A",
+            "background": "#FFFFFF",
+            "text": "#222222"
+        },
+        "dark": {
+            "primary": "#8D6E63",
+            "background": "#121212",
+            "text": "#EEEEEE"
+        }
+    },
+    "tips": [
+        "Weigh both coffee and water for consistent results.",
+        "Adjust grind size before dose to control extraction.",
+        "Use freshly roasted, rested beans for best flavor."
+    ],
+    "settings": {
+        "defaultGrinderSetting": 5,
+        "temperatureUnit": "°C",
+        "autoUpdateAssets": true
+    },
+    "lastUpdated": "2026-03-10T00:00:00Z"
+}
