@@ -36,6 +36,7 @@ model Profile {
   milkPreference  String?
   sweetnessLevel  Int      @default(3)
   strengthLevel   Int      @default(3)
+  pfpUrl          String?  // Add profile picture URL
 }
 
 model Recipe {

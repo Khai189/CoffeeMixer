@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ChangeEvent, FC } from "react";
 
 interface UserProfile {
     name: string;
@@ -8,33 +9,80 @@ interface UserProfile {
     milkPreference: string;
     sweetnessLevel: number;
     strengthLevel: number;
+    profileUrl?: string;
+    pfp?: string;
+}
+
+interface ProfileProps {
+    user: UserProfile;
+    onUpdate: (user: UserProfile) => void;
 }
 
 const brewMethods = ["Espresso", "French Press", "Pour Over", "Cold Brew", "AeroPress", "Moka Pot"];
 const milkOptions = ["None", "Whole Milk", "Oat Milk", "Almond Milk", "Soy Milk", "Coconut Milk"];
 
-export default function Profile() {
+const Profile: FC<ProfileProps> = ({ user, onUpdate }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [profile, setProfile] = useState<UserProfile>({
-        name: "Coffee Lover",
-        email: "coffee@example.com",
-        favoriteDrink: "Cappuccino",
-        brewMethod: "Espresso",
-        milkPreference: "Oat Milk",
-        sweetnessLevel: 3,
-        strengthLevel: 4,
+        name: user.name || "Coffee Lover",
+        email: user.email || "coffee@example.com",
+        favoriteDrink: user.favoriteDrink || "Cappuccino",
+        brewMethod: user.brewMethod || "Espresso",
+        milkPreference: user.milkPreference || "Oat Milk",
+        sweetnessLevel: user.sweetnessLevel || 3,
+        strengthLevel: user.strengthLevel || 4,
+        profileUrl: user.profileUrl || "",
+        pfp: user.pfp || "",
     });
+    const [uploading, setUploading] = useState(false);
 
     const handleChange = (field: keyof UserProfile, value: string | number) => {
         setProfile((prev) => ({ ...prev, [field]: value }));
+    };
+
+    const handleProfileUrlChange = (e: ChangeEvent<HTMLInputElement>) => {
+        const newUrl = e.target.value;
+        setProfile((prev) => ({ ...prev, profileUrl: newUrl, name: newUrl }));
+        onUpdate({ ...user, profileUrl: newUrl, name: newUrl });
+    };
+
+    const handlePfpClick = () => {
+        const input = document.getElementById("pfp-upload") as HTMLInputElement | null;
+        if (input) input.click();
+    };
+
+    const handlePfpUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploading(true);
+        const formData = new FormData();
+        formData.append("image", file);
+        const res = await fetch("/api/upload", { method: "POST", body: formData });
+        const data = await res.json();
+        setProfile((prev) => ({ ...prev, pfp: data.url }));
+        setUploading(false);
+        onUpdate({ ...user, pfp: data.url });
     };
 
     return (
         <div className="max-w-2xl mx-auto p-6 space-y-8">
             {/* Header */}
             <div className="flex items-center gap-4">
-                <div className="w-20 h-20 rounded-full bg-amber-100 dark:bg-amber-900 flex items-center justify-center text-3xl">
-                    ☕
+                <div className="relative">
+                    <img
+                        src={profile.pfp || "/default-pfp.png"}
+                        alt="Profile"
+                        className="rounded-full w-20 h-20 object-cover cursor-pointer border-2 border-gray-300"
+                        onClick={handlePfpClick}
+                    />
+                    {uploading && <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70">Uploading...</div>}
+                    <input
+                        id="pfp-upload"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handlePfpUpload}
+                    />
                 </div>
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -231,4 +279,6 @@ export default function Profile() {
             </section>
         </div>
     );
-}
+};
+
+export default Profile;

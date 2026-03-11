@@ -27,6 +27,12 @@ export async function loader({ request }: Route.LoaderArgs) {
         prisma.like.count({ where: { userId } }),
     ]);
 
+    const recipes = await prisma.recipe.findMany({
+        where: { authorId: userId },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+    });
+
     return {
         user: {
             id: user.id,
@@ -39,12 +45,14 @@ export async function loader({ request }: Route.LoaderArgs) {
             milkPreference: user.profile?.milkPreference || "None",
             sweetnessLevel: user.profile?.sweetnessLevel ?? 3,
             strengthLevel: user.profile?.strengthLevel ?? 3,
+            pfpUrl: user.profile?.pfpUrl || "",
         },
         stats: {
             saved: savedCount,
             recipes: recipesCount,
             likes: likeCount,
         },
+        feed: recipes,
     };
 }
 
@@ -59,6 +67,7 @@ export async function action({ request }: Route.ActionArgs) {
     const milkPreference = formData.get("milkPreference") as string;
     const sweetnessLevel = Number(formData.get("sweetnessLevel"));
     const strengthLevel = Number(formData.get("strengthLevel"));
+    const pfpUrl = formData.get("pfpUrl") as string | undefined;
 
     await prisma.user.update({
         where: { id: userId },
@@ -67,8 +76,8 @@ export async function action({ request }: Route.ActionArgs) {
 
     await prisma.profile.upsert({
         where: { userId },
-        update: { favoriteDrink, brewMethod, milkPreference, sweetnessLevel, strengthLevel },
-        create: { userId, favoriteDrink, brewMethod, milkPreference, sweetnessLevel, strengthLevel },
+        update: { favoriteDrink, brewMethod, milkPreference, sweetnessLevel, strengthLevel, pfpUrl },
+        create: { userId, favoriteDrink, brewMethod, milkPreference, sweetnessLevel, strengthLevel, pfpUrl },
     });
 
     return { success: true };
@@ -96,7 +105,7 @@ const sweetnessLabels = ["None", "Hint", "Balanced", "Sweet", "Dessert"];
 const strengthLabels = ["Light", "Mild", "Medium", "Bold", "Intense"];
 
 export default function ProfilePage({ loaderData, actionData }: Route.ComponentProps) {
-    const { user, profile, stats } = loaderData;
+    const { user, profile, stats, feed } = loaderData;
     const navigation = useNavigation();
     const isSaving = navigation.state === "submitting";
 
@@ -105,8 +114,21 @@ export default function ProfilePage({ loaderData, actionData }: Route.ComponentP
     const [sweetness, setSweetness] = useState(profile.sweetnessLevel);
     const [strength, setStrength] = useState(profile.strengthLevel);
     const [favoriteDrink, setFavoriteDrink] = useState(profile.favoriteDrink);
+    const [pfpUrl, setPfpUrl] = useState(profile.pfpUrl);
 
     const showSuccess = actionData && "success" in actionData && actionData.success && navigation.state === "idle";
+
+    const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append("image", file);
+
+        const res = await fetch("/api/upload", { method: "POST", body: formData });
+        const data = await res.json();
+        setPfpUrl(data.url);
+    };
 
     return (
         <main className="max-w-2xl mx-auto p-6 space-y-8">
@@ -116,14 +138,24 @@ export default function ProfilePage({ loaderData, actionData }: Route.ComponentP
                 <input type="hidden" name="milkPreference" value={milkPreference} />
                 <input type="hidden" name="sweetnessLevel" value={sweetness} />
                 <input type="hidden" name="strengthLevel" value={strength} />
+                <input type="hidden" name="pfpUrl" value={pfpUrl} />
 
-                {/* Header */}
+                {/* Header with avatar upload */}
                 <div className="flex items-center gap-4">
-                    <div
-                        className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-200 to-amber-400 dark:from-amber-700 dark:to-amber-900 flex items-center justify-center text-3xl font-bold text-white shadow-lg"
-                        aria-hidden="true"
-                    >
-                        {user.name.charAt(0).toUpperCase()}
+                    <div className="relative">
+                        <img
+                            src={pfpUrl || "/default-pfp.png"}
+                            alt="Profile"
+                            className="w-20 h-20 rounded-full object-cover cursor-pointer border-2 border-gray-300"
+                            onClick={() => document.getElementById("pfp-upload")?.click()}
+                        />
+                        <input
+                            id="pfp-upload"
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleAvatarUpload}
+                        />
                     </div>
                     <div className="flex-1">
                         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{user.name}</h1>
@@ -341,12 +373,30 @@ export default function ProfilePage({ loaderData, actionData }: Route.ComponentP
                                 <> with <span className="font-semibold text-amber-600 dark:text-amber-400">{milkPreference.toLowerCase()}</span></>
                             )}
                             {favoriteDrink && (
-                                <> — your go-to is a <span className="font-semibold text-amber-600 dark:text-amber-400">{favoriteDrink}</span></>
+                                <>. Your go-to is a <span className="font-semibold text-amber-600 dark:text-amber-400">{favoriteDrink}</span></>
                             )}.
                         </p>
                     </div>
                 </section>
             </Form>
+
+            {/* User Feed/Recipes Section */}
+            <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6" aria-labelledby="feed-heading">
+                <h2 id="feed-heading" className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Your Recipes</h2>
+                <div className="grid grid-cols-1 gap-4">
+                    {feed.length === 0 ? (
+                        <p className="text-gray-500 dark:text-gray-400">No recipes yet.</p>
+                    ) : (
+                        feed.map((recipe: any) => (
+                            <div key={recipe.id} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{recipe.name}</h3>
+                                <p className="text-sm text-gray-600 dark:text-gray-300">{recipe.description}</p>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">{recipe.brewMethod}</span>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </section>
 
             {/* Stats */}
             <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6" aria-labelledby="stats-heading">

@@ -1,4 +1,5 @@
 import { type RouteConfig, index, route } from "@react-router/dev/routes";
+import UserProfilePage from "./routes/user";
 
 export default [
   index("routes/home.tsx"),
@@ -10,5 +11,5 @@ export default [
   route("login", "routes/login.tsx"),
   route("signup", "routes/signup.tsx"),
   route("logout", "routes/logout.tsx"),
+  route("user/:userId", "routes/user.tsx"),
 ] satisfies RouteConfig;
-        
