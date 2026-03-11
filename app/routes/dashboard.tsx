@@ -3,6 +3,8 @@ import { prisma } from "../lib/db.server";
 import { requireUserId } from "../lib/session.server";
 import { Link } from "react-router";
 import CoffeeCard from "../components/CoffeeCard";
+import { useCallback, useState } from "react";
+import { useFetcher } from "react-router";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -66,14 +68,22 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export default function Dashboard({ loaderData }: Route.ComponentProps) {
     const { userName, savedRecipes, myRecipes, userLikes, userSaves, stats } = loaderData;
+    const fetcher = useFetcher();
+    const [reloadKey, setReloadKey] = useState(0);
+
+    // Callback to reload dashboard
+    const handleLikeSave = useCallback(() => {
+        fetcher.load("/dashboard");
+        setReloadKey((k) => k + 1);
+    }, [fetcher]);
 
     return (
-        <main className="max-w-5xl mx-auto px-4 py-6 sm:py-8 space-y-8 sm:space-y-10">
+        <main className="max-w-5xl mx-auto px-4 py-6 sm:py-8 space-y-8 sm:space-y-10" key={reloadKey}>
             {/* Greeting + Create CTA */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-                        Welcome back, {userName} <span aria-hidden="true">☕</span>
+                        Ready to make some new recipes {userName}?
                     </h1>
                     <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mt-1">Here's what's brewing in your world.</p>
                 </div>
@@ -127,7 +137,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
             <section aria-labelledby="saved-heading">
                 <div className="flex items-center justify-between mb-4">
                     <h2 id="saved-heading" className="text-xl font-semibold text-gray-800 dark:text-gray-200">
-                        <span aria-hidden="true">🔖</span> Saved Recipes
+                        Saved Recipes
                     </h2>
                     {stats.saved > 4 && (
                         <span className="text-sm text-gray-500">Showing latest 4 of {stats.saved}</span>
@@ -156,6 +166,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
                                 liked={userLikes.includes(recipe.id)}
                                 saved={userSaves.includes(recipe.id)}
                                 imageUrl={recipe.imageUrl}
+                                onLikeSave={handleLikeSave}
                             />
                         ))}
                     </div>
@@ -166,7 +177,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
             <section aria-labelledby="my-recipes-heading">
                 <div className="flex items-center justify-between mb-4">
                     <h2 id="my-recipes-heading" className="text-xl font-semibold text-gray-800 dark:text-gray-200">
-                        <span aria-hidden="true">📝</span> My Recipes
+                        My Recipes
                     </h2>
                     {stats.recipes > 4 && (
                         <span className="text-sm text-gray-500">Showing latest 4 of {stats.recipes}</span>
@@ -195,6 +206,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
                                 liked={userLikes.includes(recipe.id)}
                                 saved={userSaves.includes(recipe.id)}
                                 imageUrl={recipe.imageUrl}
+                                onLikeSave={handleLikeSave}
                             />
                         ))}
                     </div>

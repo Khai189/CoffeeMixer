@@ -12,6 +12,7 @@ interface CoffeeCardProps {
     liked?: boolean;
     saved?: boolean;
     imageUrl?: string | null;
+    onLikeSave?: () => void;
 }
 
 const difficultyColors = {
@@ -41,6 +42,7 @@ export default function CoffeeCard({
     liked = false,
     saved = false,
     imageUrl,
+    onLikeSave,
 }: CoffeeCardProps) {
     const likeFetcher = useFetcher();
     const saveFetcher = useFetcher();
@@ -56,6 +58,14 @@ export default function CoffeeCard({
     const displayLikes = likeFetcher.formData
         ? (isLiked ? likes + 1 : likes - 1)
         : likes;
+
+    // Call onLikeSave when like/save completes
+    if (onLikeSave && likeFetcher.state === "idle" && likeFetcher.data) {
+        onLikeSave();
+    }
+    if (onLikeSave && saveFetcher.state === "idle" && saveFetcher.data) {
+        onLikeSave();
+    }
 
     return (
         <article className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden hover:shadow-lg hover:border-amber-300 dark:hover:border-amber-700 transition-shadow" aria-label={`${name} by ${author}`}>

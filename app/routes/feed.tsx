@@ -270,7 +270,7 @@ export default function Feed({ loaderData, actionData }: Route.ComponentProps) {
         <main className="max-w-2xl mx-auto px-4 py-6 sm:py-8 space-y-6 sm:space-y-8">
             <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-                    Community Feed <span aria-hidden="true">💬</span>
+                    Community Feed
                 </h1>
                 <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mt-1">
                     Share what you're brewing, discover what others are sipping.

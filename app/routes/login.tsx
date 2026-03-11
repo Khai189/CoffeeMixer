@@ -49,7 +49,7 @@ export default function LoginPage() {
             <div className="w-full max-w-sm space-y-8 relative z-10">
                 {/* Header */}
                 <div className="text-center">
-                    <span className="text-5xl">☕</span>
+                    {/* Removed emoji */}
                     <h1 className="mt-4 text-2xl font-bold text-gray-900 dark:text-white">
                         Welcome back
                     </h1>
