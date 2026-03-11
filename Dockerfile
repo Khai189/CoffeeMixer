@@ -12,8 +12,8 @@ FROM node:20-alpine AS build-env
 COPY . /app/
 COPY --from=development-dependencies-env /app/node_modules /app/node_modules
 WORKDIR /app
-ARG DATABASE_URL
-ENV DATABASE_URL=${DATABASE_URL}
+ARG DIRECT_DATABASE_URL
+ENV DATABASE_URL=${DIRECT_DATABASE_URL}
 RUN npx prisma generate
 RUN npm run build
 
