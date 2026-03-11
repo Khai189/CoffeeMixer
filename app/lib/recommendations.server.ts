@@ -64,13 +64,15 @@ function calculateUserSimilarity(user1: UserPreferences, user2: UserPreferences)
 function calculateContentScore(
     recipe: any,
     userPrefs: UserPreferences,
-    userLikes: string[]
+    userLikes: string[],
+    userSaves: string[],
+    isBeingLiked: boolean = false
 ): number {
     let score = 0;
     
-    // Already liked/saved? Penalty (we want new recommendations)
+    // Already liked/saved? Deprioritize instead of exclude
     if (userLikes.includes(recipe.id)) {
-        return -100;
+        score -= 100; // Large penalty, but still visible
     }
     
     // Brew method match (40 points)
@@ -124,18 +126,17 @@ function calculateContentScore(
     } else if (ageInDays < 30) {
         score += 5;
     }
+
+    // Penalty for optimistic like (if recipe is being liked right now)
+    if (isBeingLiked) {
+        score -= 100; // Large penalty to deprioritize
+    }
     
     return score;
 }
 
-/**
- * Get personalized recipe recommendations for a user
- */
-export async function getRecommendationsForUser(
-    userId: string,
-    limit: number = 10
-): Promise<RecipeWithScore[]> {
-    // 1. Get user's profile and preferences
+export async function getRecommendationsForUser(userId: string, limit: number = 6) {
+    // 1. Get user profile
     const userProfile = await prisma.profile.findUnique({
         where: { userId },
         select: {
@@ -145,7 +146,6 @@ export async function getRecommendationsForUser(
             strengthLevel: true,
         },
     });
-    
     if (!userProfile) {
         // No profile yet - return popular recipes
         const recipes = await prisma.recipe.findMany({
@@ -159,17 +159,14 @@ export async function getRecommendationsForUser(
             ],
             take: limit,
         });
-        
         return recipes.map(r => ({ ...r, score: 0 }));
     }
-    
     // 2. Get user's liked recipes
     const userLikes = await prisma.like.findMany({
         where: { userId },
         select: { recipeId: true },
     });
     const likedRecipeIds = userLikes.map(l => l.recipeId);
-    
     // 3. Find similar users (collaborative filtering)
     const allProfiles = await prisma.profile.findMany({
         where: { userId: { not: userId } },
@@ -180,19 +177,17 @@ export async function getRecommendationsForUser(
                 },
             },
         },
-        take: 50, // Top 50 users for performance
+        take: 50,
     });
-    
     const similarUsers = allProfiles
         .map(profile => ({
             userId: profile.userId,
             similarity: calculateUserSimilarity(userProfile, profile),
             likedRecipes: profile.user.likes.map(l => l.recipeId),
         }))
-        .filter(u => u.similarity > 40) // Only consider similar users
+        .filter(u => u.similarity > 40)
         .sort((a, b) => b.similarity - a.similarity)
-        .slice(0, 10); // Top 10 similar users
-    
+        .slice(0, 10);
     // 4. Get recipes liked by similar users
     const collaborativeRecipeIds = new Set<string>();
     similarUsers.forEach(user => {
@@ -202,31 +197,23 @@ export async function getRecommendationsForUser(
             }
         });
     });
-    
-    // 5. Get all recipes (excluding already liked)
+    // 5. Get all recipes (including liked)
     const allRecipes = await prisma.recipe.findMany({
-        where: {
-            id: { notIn: likedRecipeIds },
-        },
+        // Remove id: { notIn: likedRecipeIds }, so liked recipes are included
         include: {
             author: { select: { id: true, name: true } },
             _count: { select: { likes: true, savedBy: true } },
         },
-        take: 100, // Consider top 100 recipes
+        take: 100,
     });
-    
     // 6. Score each recipe
-    const scoredRecipes: RecipeWithScore[] = allRecipes.map(recipe => {
-        let score = calculateContentScore(recipe, userProfile, likedRecipeIds);
-        
-        // Collaborative boost (if similar users liked it)
+    const scoredRecipes = allRecipes.map(recipe => {
+        let score = calculateContentScore(recipe, userProfile, likedRecipeIds, [], false);
         if (collaborativeRecipeIds.has(recipe.id)) {
             score += 30;
         }
-        
         return { ...recipe, score };
     });
-    
     // 7. Sort by score and return top N
     return scoredRecipes
         .sort((a, b) => b.score - a.score)
