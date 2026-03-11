@@ -49,17 +49,11 @@ export default function CoffeeCard({
     const likeFetcher = useFetcher();
     const saveFetcher = useFetcher();
 
-    // Fix: Only optimistically update if intent is like and not already liked
-    let isLiked = liked;
-    if (likeFetcher.formData) {
-        const intent = likeFetcher.formData.get("intent");
-        if (intent === "like" && !liked) isLiked = true;
-        if (intent === "like" && liked) isLiked = false; // If you support unlike, adjust here
-    }
-    const isSaved = saveFetcher.formData ? !saved : saved;
-    const displayLikes = likeFetcher.formData
-        ? (isLiked ? likes + 1 : likes - 1)
-        : likes;
+    // Remove optimistic UI logic
+    // Always use props for visual state
+    const isLiked = liked;
+    const isSaved = saved;
+    const displayLikes = likes;
 
     // Call onLikeSave when like/save completes
     if (onLikeSave && likeFetcher.state === "idle" && likeFetcher.data) {

@@ -35,6 +35,12 @@ export async function loader({ request }: Route.LoaderArgs) {
   let userLikes: string[] = [];
   let userSaves: string[] = [];
 
+  // Collect all recipe IDs shown
+  const allRecipeIds = [
+    ...recommendations.map(r => r.id),
+    ...(searchQuery ? [] : []), // will be filled below
+  ];
+
   if (searchQuery) {
     const where: any = {
       OR: [
@@ -55,22 +61,23 @@ export async function loader({ request }: Route.LoaderArgs) {
       orderBy: { createdAt: "desc" },
       take: 50, // Limit results
     });
+    allRecipeIds.push(...recipes.map(r => r.id));
+  }
 
-    // If user is logged in, get their likes and saves
-    if (userId) {
-      const [likes, saves] = await Promise.all([
-        prisma.like.findMany({
-          where: { userId },
-          select: { recipeId: true },
-        }),
-        prisma.savedRecipe.findMany({
-          where: { userId },
-          select: { recipeId: true },
-        }),
-      ]);
-      userLikes = likes.map((l) => l.recipeId);
-      userSaves = saves.map((s) => s.recipeId);
-    }
+  // If user is logged in, get their likes and saves for all shown recipes
+  if (userId && allRecipeIds.length > 0) {
+    const [likes, saves] = await Promise.all([
+      prisma.like.findMany({
+        where: { userId, recipeId: { in: allRecipeIds } },
+        select: { recipeId: true },
+      }),
+      prisma.savedRecipe.findMany({
+        where: { userId, recipeId: { in: allRecipeIds } },
+        select: { recipeId: true },
+      }),
+    ]);
+    userLikes = likes.map((l) => l.recipeId);
+    userSaves = saves.map((s) => s.recipeId);
   }
 
   return { recipes, userLikes, userSaves, userId, recommendations, searchQuery };
