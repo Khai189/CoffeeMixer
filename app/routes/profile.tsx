@@ -392,6 +392,12 @@ export default function ProfilePage({ loaderData, actionData }: Route.ComponentP
                                 <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{recipe.name}</h3>
                                 <p className="text-sm text-gray-600 dark:text-gray-300">{recipe.description}</p>
                                 <span className="text-xs text-gray-500 dark:text-gray-400">{recipe.brewMethod}</span>
+                                {/* Add link to author profile */}
+                                <div className="mt-2">
+                                    <a href={`/user/${recipe.authorId}`} className="text-sm font-semibold text-amber-600 hover:underline">
+                                        View Author Profile
+                                    </a>
+                                </div>
                             </div>
                         ))
                     )}

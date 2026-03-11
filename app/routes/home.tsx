@@ -86,6 +86,7 @@ export async function action({ request }: Route.ActionArgs) {
   if (!recipeId) return { error: "Missing recipe ID" };
 
   if (intent === "like") {
+    if (!userId) return redirect("/login");
     const existing = await prisma.like.findUnique({
       where: { userId_recipeId: { userId, recipeId } },
     });
@@ -95,6 +96,7 @@ export async function action({ request }: Route.ActionArgs) {
       await prisma.like.create({ data: { userId, recipeId } });
     }
   } else if (intent === "save") {
+    if (!userId) return redirect("/login");
     const existing = await prisma.savedRecipe.findUnique({
       where: { userId_recipeId: { userId, recipeId } },
     });
@@ -174,8 +176,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 className="text-sm text-amber-600 hover:text-amber-700 dark:text-amber-500 dark:hover:text-amber-400 focus:outline-none focus:underline"
               >
                 Update preferences
-              </a>
-            )}
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
             {userId

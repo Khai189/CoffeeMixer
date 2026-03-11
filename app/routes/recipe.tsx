@@ -38,6 +38,7 @@ export async function action({ request, params }: Route.ActionArgs) {
     const recipeId = params.id;
 
     if (intent === "like") {
+        if (!userId) return redirect("/login");
         const existing = await prisma.like.findUnique({
             where: { userId_recipeId: { userId, recipeId } },
         });
@@ -47,6 +48,7 @@ export async function action({ request, params }: Route.ActionArgs) {
             await prisma.like.create({ data: { userId, recipeId } });
         }
     } else if (intent === "save") {
+        if (!userId) return redirect("/login");
         const existing = await prisma.savedRecipe.findUnique({
             where: { userId_recipeId: { userId, recipeId } },
         });
@@ -55,6 +57,9 @@ export async function action({ request, params }: Route.ActionArgs) {
         } else {
             await prisma.savedRecipe.create({ data: { userId, recipeId } });
         }
+    } else if (intent === "comment") {
+        if (!userId) return redirect("/login");
+        // ...existing comment logic...
     }
 
     return { ok: true };
