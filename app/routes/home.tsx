@@ -176,6 +176,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 className="text-sm text-amber-600 hover:text-amber-700 dark:text-amber-500 dark:hover:text-amber-400 focus:outline-none focus:underline"
               >
                 Update preferences
+              </a>
+            )}
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
             {userId
