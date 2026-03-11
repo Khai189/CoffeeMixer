@@ -202,6 +202,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 difficulty={recipe.difficulty as "easy" | "medium" | "hard"}
                 ingredients={recipe.ingredients}
                 author={recipe.author?.name || "CoffeeMixer"}
+                authorId={recipe.author?.id}
                 likes={recipe._count.likes}
                 liked={userLikes.includes(recipe.id)}
                 saved={userSaves.includes(recipe.id)}
@@ -253,6 +254,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                     difficulty={recipe.difficulty as "easy" | "medium" | "hard"}
                     ingredients={recipe.ingredients}
                     author={recipe.author?.name || "CoffeeMixer"}
+                    authorId={recipe.author?.id}
                     likes={recipe._count.likes}
                     liked={userLikes.includes(recipe.id)}
                     saved={userSaves.includes(recipe.id)}
