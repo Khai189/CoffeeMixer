@@ -8,18 +8,6 @@ CoffeeMixer is a full-stack social media-style coffee recommendation app built w
 
 ## Features
 
-### **Authentication System**
-- Secure user registration and login with session-based authentication
-- Password hashing with bcrypt
-- Protected routes and personalized experiences
-
-### **Mobile-First Responsive Design**
-- Fully optimized for mobile devices with touch-friendly UI
-- Responsive hamburger navigation menu
-- Mobile-optimized typography and spacing
-- Hidden scrollbars for cleaner mobile experience
-- Minimum 44px touch targets for accessibility
-
 ### **Smart Recommendation Engine**
 - **Hybrid recommendation system** combining:
   - **Content-based filtering**: Matches recipes to your brew method, milk type, sweetness, and strength preferences
@@ -28,14 +16,6 @@ CoffeeMixer is a full-stack social media-style coffee recommendation app built w
   - **Recency bonus**: Gives newer recipes a slight boost
 - Personalized "For You" section on home page
 - Trending recipes for non-logged-in users
-
-### **Image Cropping & Upload**
-- **Interactive image cropping** with react-easy-crop
-- Crop images before posting to feed or creating recipes
-- Live preview with zoom controls
-- Re-crop option after initial crop
-- Supports JPEG, PNG, WebP, and GIF formats (max 5MB)
-- Images stored in `public/uploads/`
 
 ### **Recipe Management**
 - Create and share coffee recipes with ingredients, instructions, and images
@@ -49,7 +29,6 @@ CoffeeMixer is a full-stack social media-style coffee recommendation app built w
 - Share photos of your coffee creations
 - Delete your own posts
 - Real-time timestamps ("just now", "2h ago", etc.)
-- Empty state messages for better UX
 
 ### **User Profiles**
 - Interactive coffee preference selector:
