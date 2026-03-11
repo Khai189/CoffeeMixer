@@ -22,4 +22,4 @@ COPY --from=build-env /app/build /app/build
 COPY --from=build-env /app/generated /app/generated
 COPY --from=build-env /app/prisma /app/prisma
 WORKDIR /app
-CMD ["sh", "-c", "npx prisma migrate deploy && npm run start"]
+CMD ["sh", "-c", "npx prisma migrate deploy --verbose && npm run start"]
