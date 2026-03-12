@@ -31,12 +31,25 @@ export async function loader({ request }: Route.LoaderArgs) {
         take: 50,
     });
 
-    // Fix null profile to undefined for TS compatibility
+    // Utility for checking file existence
+    const fs = require("fs");
+    const path = require("path");
+    function checkImage(url: string | null | undefined, fallback: string) {
+        if (typeof url === "string" && url.startsWith("/uploads/")) {
+            const imagePath = path.join(process.cwd(), "public", url);
+            if (!fs.existsSync(imagePath)) return fallback;
+        }
+        return typeof url === "string" && url.length > 0 ? url : fallback;
+    }
+
+    // Patch profile image for posts
     const safePosts = posts.map(post => ({
         ...post,
         author: {
             ...post.author,
-            profile: post.author.profile && post.author.profile.pfpUrl ? { pfpUrl: post.author.profile.pfpUrl ?? undefined } : undefined,
+            profile: post.author.profile && post.author.profile.pfpUrl
+                ? { pfpUrl: checkImage(post.author.profile.pfpUrl, "/default-pfp.png") }
+                : { pfpUrl: "/default-pfp.png" },
         },
     }));
 

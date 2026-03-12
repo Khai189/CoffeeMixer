@@ -56,11 +56,49 @@ export async function loader({ request }: Route.LoaderArgs) {
     const userLikes = likedRecipes.map((l) => l.recipeId);
     const userSaves = savedRecipes.map((s) => s.recipeId);
 
+    // Utility for checking file existence
+    const fs = require("fs");
+    const path = require("path");
+    function checkImage(url: string | null | undefined, fallback: string) {
+        if (typeof url === "string" && url.startsWith("/uploads/")) {
+            const imagePath = path.join(process.cwd(), "public", url);
+            if (!fs.existsSync(imagePath)) return fallback;
+        }
+        return typeof url === "string" && url.length > 0 ? url : fallback;
+    }
+
+    // Patch recipe and pfp images for savedRecipes and myRecipes
+    const patchedSavedRecipes = savedRecipes.map(sr => {
+        const recipe = sr.recipe;
+        return {
+            ...recipe,
+            imageUrl: checkImage(recipe.imageUrl, "/default-recipe.png"),
+            author: {
+                ...recipe.author,
+                profile: {
+                    ...recipe.author?.profile,
+                    pfpUrl: checkImage(recipe.author?.profile?.pfpUrl, "/default-pfp.png"),
+                },
+            },
+        };
+    });
+    const patchedMyRecipes = myRecipes.map(recipe => ({
+        ...recipe,
+        imageUrl: checkImage(recipe.imageUrl, "/default-recipe.png"),
+        author: {
+            ...recipe.author,
+            profile: {
+                ...recipe.author?.profile,
+                pfpUrl: checkImage(recipe.author?.profile?.pfpUrl, "/default-pfp.png"),
+            },
+        },
+    }));
+
     return {
         userName: user?.name || "Coffee Lover",
         userId,
-        savedRecipes: savedRecipes.map((sr) => sr.recipe),
-        myRecipes,
+        savedRecipes: patchedSavedRecipes,
+        myRecipes: patchedMyRecipes,
         userLikes,
         userSaves,
         stats: { saved: savedCount, likes: likeCount, recipes: recipeCount },

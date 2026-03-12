@@ -80,7 +80,48 @@ export async function loader({ request }: Route.LoaderArgs) {
     userSaves = saves.map((s) => s.recipeId);
   }
 
-  return { recipes, userLikes, userSaves, userId, recommendations, searchQuery };
+  // Utility for checking file existence
+  const fs = require("fs");
+  const path = require("path");
+  function checkImage(url: string | null | undefined, fallback: string) {
+    if (typeof url === "string" && url.startsWith("/uploads/")) {
+      const imagePath = path.join(process.cwd(), "public", url);
+      if (!fs.existsSync(imagePath)) return fallback;
+    }
+    return typeof url === "string" && url.length > 0 ? url : fallback;
+  }
+
+  // Patch recipe and pfp images for recommendations and search results
+  const patchedRecommendations = recommendations.map(recipe => ({
+    ...recipe,
+    imageUrl: checkImage(recipe.imageUrl, "/default-recipe.png"),
+    author: {
+      ...recipe.author,
+      profile: {
+        ...recipe.author?.profile,
+        pfpUrl: checkImage(recipe.author?.profile?.pfpUrl, "/default-pfp.png"),
+      },
+    },
+  }));
+  const patchedRecipes = recipes.map(recipe => ({
+    ...recipe,
+    imageUrl: checkImage(recipe.imageUrl, "/default-recipe.png"),
+    author: {
+      ...recipe.author,
+      profile: {
+        ...recipe.author?.profile,
+        pfpUrl: checkImage(recipe.author?.profile?.pfpUrl, "/default-pfp.png"),
+      },
+    },
+  }));
+
+  return {
+    recommendations: patchedRecommendations,
+    recipes: patchedRecipes,
+    userLikes,
+    userSaves,
+    searchQuery,
+  };
 }
 
 export async function action({ request }: Route.ActionArgs) {

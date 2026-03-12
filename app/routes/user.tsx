@@ -21,21 +21,42 @@ export async function loader({ params }: Route.LoaderArgs) {
         orderBy: { createdAt: "desc" },
         take: 10,
     });
+
+    // Utility for checking file existence
+    const fs = require("fs");
+    const path = require("path");
+    function checkImage(url: string | null | undefined, fallback: string) {
+        if (typeof url === "string" && url.startsWith("/uploads/")) {
+            const imagePath = path.join(process.cwd(), "public", url);
+            if (!fs.existsSync(imagePath)) return fallback;
+        }
+        return typeof url === "string" && url.length > 0 ? url : fallback;
+    }
+
+    // Patch profile image for user
+    const patchedProfile = {
+        favoriteDrink: user.profile?.favoriteDrink || "",
+        brewMethod: user.profile?.brewMethod || "Espresso",
+        milkPreference: user.profile?.milkPreference || "None",
+        sweetnessLevel: user.profile?.sweetnessLevel ?? 3,
+        strengthLevel: user.profile?.strengthLevel ?? 3,
+        pfpUrl: checkImage(user.profile?.pfpUrl, "/default-pfp.png"),
+    };
+
+    // Patch recipe images for feed
+    const patchedFeed = recipes.map(recipe => ({
+        ...recipe,
+        imageUrl: checkImage(recipe.imageUrl, "/default-recipe.png"),
+    }));
+
     return {
         user: {
             id: user.id,
             name: user.name,
             email: user.email,
         },
-        profile: {
-            favoriteDrink: user.profile?.favoriteDrink || "",
-            brewMethod: user.profile?.brewMethod || "Espresso",
-            milkPreference: user.profile?.milkPreference || "None",
-            sweetnessLevel: user.profile?.sweetnessLevel ?? 3,
-            strengthLevel: user.profile?.strengthLevel ?? 3,
-            pfpUrl: user.profile?.pfpUrl || "",
-        },
-        feed: recipes,
+        profile: patchedProfile,
+        feed: patchedFeed,
     };
 }
 
