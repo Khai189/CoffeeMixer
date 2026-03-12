@@ -72,10 +72,11 @@ export default function CoffeeCard({
             {imageUrl && (
                 <Link to={`/recipe/${id}`} className="block">
                     <img
-                        src={imageUrl}
+                        src={imageUrl || "/default-recipe.png"}
                         alt={name}
                         className="w-full h-40 object-cover"
                         loading="lazy"
+                        onError={e => { e.currentTarget.src = "/default-recipe.png"; }}
                     />
                 </Link>
             )}
