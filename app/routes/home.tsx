@@ -5,6 +5,8 @@ import { getUserId } from "../lib/session.server";
 import { redirect, Form, useNavigation, useFetcher } from "react-router";
 import CoffeeCard from "../components/CoffeeCard";
 import { getRecommendationsForUser, getTrendingRecipes } from "../lib/recommendations.server";
+import { existsSync } from "fs";
+import { join } from "path";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -80,40 +82,61 @@ export async function loader({ request }: Route.LoaderArgs) {
     userSaves = saves.map((s) => s.recipeId);
   }
 
-  // Utility for checking file existence
-  const fs = require("fs");
-  const path = require("path");
+  // Utility for checking file existence (ESM compatible)
   function checkImage(url: string | null | undefined, fallback: string) {
     if (typeof url === "string" && url.startsWith("/uploads/")) {
-      const imagePath = path.join(process.cwd(), "public", url);
-      if (!fs.existsSync(imagePath)) return fallback;
+      const imagePath = join(process.cwd(), "public", url);
+      if (!existsSync(imagePath)) return fallback;
     }
     return typeof url === "string" && url.length > 0 ? url : fallback;
   }
 
   // Patch recipe and pfp images for recommendations and search results
-  const patchedRecommendations = recommendations.map(recipe => ({
-    ...recipe,
-    imageUrl: checkImage(recipe.imageUrl, "/default-recipe.png"),
-    author: {
-      ...recipe.author,
-      profile: {
-        ...recipe.author?.profile,
-        pfpUrl: checkImage(recipe.author?.profile?.pfpUrl, "/default-pfp.png"),
+  const patchedRecommendations = recommendations.map(recipe => {
+    let authorPfpUrl = "/default-pfp.png";
+    // Defensive: check for profile property and pfpUrl
+    if (
+      recipe.author &&
+      typeof recipe.author === "object" &&
+      "profile" in recipe.author &&
+      recipe.author.profile &&
+      typeof recipe.author.profile === "object" &&
+      "pfpUrl" in recipe.author.profile &&
+      typeof (recipe.author.profile as any).pfpUrl === "string"
+    ) {
+      authorPfpUrl = checkImage((recipe.author.profile as any).pfpUrl, "/default-pfp.png");
+    }
+    return {
+      ...recipe,
+      imageUrl: checkImage(recipe.imageUrl, "/default-recipe.png"),
+      author: {
+        ...recipe.author,
+        authorPfpUrl,
       },
-    },
-  }));
-  const patchedRecipes = recipes.map(recipe => ({
-    ...recipe,
-    imageUrl: checkImage(recipe.imageUrl, "/default-recipe.png"),
-    author: {
-      ...recipe.author,
-      profile: {
-        ...recipe.author?.profile,
-        pfpUrl: checkImage(recipe.author?.profile?.pfpUrl, "/default-pfp.png"),
+    };
+  });
+  const patchedRecipes = recipes.map(recipe => {
+    let authorPfpUrl = "/default-pfp.png";
+    if (
+      recipe.author &&
+      typeof recipe.author === "object" &&
+      "profile" in recipe.author &&
+      recipe.author.profile &&
+      typeof recipe.author.profile === "object" &&
+      "pfpUrl" in recipe.author.profile &&
+      typeof (recipe.author.profile as any).pfpUrl === "string"
+    ) {
+      authorPfpUrl = checkImage((recipe.author.profile as any).pfpUrl, "/default-pfp.png");
+    }
+    return {
+      ...recipe,
+      imageUrl: checkImage(recipe.imageUrl, "/default-recipe.png"),
+      author: {
+        ...recipe.author,
+        authorPfpUrl,
       },
-    },
-  }));
+    };
+  });
 
   return {
     recommendations: patchedRecommendations,
@@ -121,6 +144,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     userLikes,
     userSaves,
     searchQuery,
+    userId,
   };
 }
 
@@ -268,7 +292,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 liked={data.userLikes.includes(recipe.id)}
                 saved={data.userSaves.includes(recipe.id)}
                 imageUrl={recipe.imageUrl}
-                authorPfpUrl={recipe.author?.profile?.pfpUrl || null}
+                authorPfpUrl={recipe.author?.authorPfpUrl || null}
                 onLikeSave={handleLikeSave}
               />
             ))}
@@ -321,7 +345,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                     liked={data.userLikes.includes(recipe.id)}
                     saved={data.userSaves.includes(recipe.id)}
                     imageUrl={recipe.imageUrl}
-                    authorPfpUrl={recipe.author?.profile?.pfpUrl || null}
+                    authorPfpUrl={recipe.author?.authorPfpUrl || null}
                     onLikeSave={handleLikeSave}
                   />
                 ))}

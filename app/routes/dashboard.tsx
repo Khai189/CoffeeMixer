@@ -5,6 +5,8 @@ import { Link } from "react-router";
 import CoffeeCard from "../components/CoffeeCard";
 import { useCallback, useState } from "react";
 import { useFetcher } from "react-router";
+import { existsSync } from "fs";
+import { join } from "path";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -56,13 +58,10 @@ export async function loader({ request }: Route.LoaderArgs) {
     const userLikes = likedRecipes.map((l) => l.recipeId);
     const userSaves = savedRecipes.map((s) => s.recipeId);
 
-    // Utility for checking file existence
-    const fs = require("fs");
-    const path = require("path");
     function checkImage(url: string | null | undefined, fallback: string) {
         if (typeof url === "string" && url.startsWith("/uploads/")) {
-            const imagePath = path.join(process.cwd(), "public", url);
-            if (!fs.existsSync(imagePath)) return fallback;
+            const imagePath = join(process.cwd(), "public", url);
+            if (!existsSync(imagePath)) return fallback;
         }
         return typeof url === "string" && url.length > 0 ? url : fallback;
     }
