@@ -142,16 +142,16 @@ export default function ProfilePage({ loaderData, actionData }: Route.ComponentP
 
     const showSuccess = actionData && "success" in actionData && actionData.success && navigation.state === "idle";
 
+    // Revert Express upload endpoint logic, restore original profile image upload handling
     const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        const formData = new FormData();
-        formData.append("image", file);
-
-        const res = await fetch("/api/upload", { method: "POST", body: formData });
-        const data = await res.json();
-        setPfpUrl(data.url);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setPfpUrl(reader.result as string);
+        };
+        reader.readAsDataURL(file);
     };
 
     return (
