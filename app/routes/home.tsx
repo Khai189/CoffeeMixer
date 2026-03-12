@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import type { Route } from "./+types/home";
 import { prisma } from "../lib/db.server";
 import { getUserId } from "../lib/session.server";
@@ -184,24 +184,36 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const { recipes, userLikes, userSaves, userId, recommendations, searchQuery } = loaderData;
   const [search, setSearch] = useState(searchQuery || "");
   const fetcher = useFetcher();
-  const [reloadKey, setReloadKey] = useState(0);
+  const isFirstRun = useRef(true);
 
   // Callback to reload home feed after like/save
-  const handleLikeSave = () => setReloadKey((k) => k + 1);
+  const handleLikeSave = useCallback(() => {
+    // If searching, refresh results. If not, the main loader revalidates automatically.
+    // We use the fetcher to reload the current view without a hard page reload.
+    fetcher.load(`?search=${encodeURIComponent(search)}`);
+  }, [search, fetcher]);
 
   // Debounced instant search
   useEffect(() => {
+    // Prevent double-fetch on initial load
+    if (isFirstRun.current) {
+        isFirstRun.current = false;
+        if (search === (searchQuery || "")) return;
+    }
+
     const timeout = setTimeout(() => {
-      fetcher.load(`/home?search=${encodeURIComponent(search)}`);
+      // Use relative URL `?search=` instead of hardcoded `/home`.
+      // This ensures it works whether served at / or /home.
+      fetcher.load(`?search=${encodeURIComponent(search)}`);
     }, 250);
     return () => clearTimeout(timeout);
-  }, [search]);
+  }, [search, searchQuery, fetcher]);
 
   // Use fetcher data if available, else loaderData
   const data = fetcher.data || loaderData;
 
   return (
-    <main className="max-w-5xl mx-auto px-4 py-6 sm:py-8" key={reloadKey}>
+    <main className="max-w-5xl mx-auto px-4 py-6 sm:py-8">
       {/* Hero */}
       <section className="text-center mb-8 sm:mb-12" aria-labelledby="hero-heading">
         <h1 id="hero-heading" className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3">
