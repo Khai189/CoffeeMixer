@@ -5,8 +5,6 @@ import { getUserId } from "../lib/session.server";
 import { redirect, Form, useNavigation, useFetcher } from "react-router";
 import CoffeeCard from "../components/CoffeeCard";
 import { getRecommendationsForUser, getTrendingRecipes } from "../lib/recommendations.server";
-import { existsSync } from "fs";
-import { join } from "path";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -82,22 +80,12 @@ export async function loader({ request }: Route.LoaderArgs) {
     userSaves = saves.map((s) => s.recipeId);
   }
 
-  // Utility for checking file existence (ESM compatible, bulletproof for serverless)
+  // Utility for robust image fallback (no fs/path, serverless-safe)
   function checkImage(url: string | null | undefined, fallback: string) {
-    try {
-      // If fs or path are not available, always fallback
-      if (typeof existsSync !== "function" || typeof join !== "function") {
-        return fallback;
-      }
-      if (typeof url === "string" && url.startsWith("/uploads/")) {
-        const imagePath = join(process.cwd(), "public", url);
-        if (!existsSync(imagePath)) return fallback;
-      }
-      return typeof url === "string" && url.length > 0 ? url : fallback;
-    } catch (err) {
-      // In serverless (Railway), fs may throw or not exist; always fallback
-      return fallback;
-    }
+    // If the url is missing, empty, or not a string, fallback
+    if (!url || typeof url !== "string" || url.length === 0) return fallback;
+    // If the url is for uploads, just return it (let client handle 404)
+    return url;
   }
 
   // Patch recipe and pfp images for recommendations and search results
