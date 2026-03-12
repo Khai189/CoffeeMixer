@@ -19,13 +19,28 @@ export async function loader({ request }: Route.LoaderArgs) {
 
     const posts = await prisma.post.findMany({
         include: {
-            author: { select: { id: true, name: true } },
+            author: {
+                select: {
+                    id: true,
+                    name: true,
+                    profile: { select: { pfpUrl: true } },
+                },
+            },
         },
         orderBy: { createdAt: "desc" },
         take: 50,
     });
 
-    return { posts, userId };
+    // Fix null profile to undefined for TS compatibility
+    const safePosts = posts.map(post => ({
+        ...post,
+        author: {
+            ...post.author,
+            profile: post.author.profile && post.author.profile.pfpUrl ? { pfpUrl: post.author.profile.pfpUrl ?? undefined } : undefined,
+        },
+    }));
+
+    return { posts: safePosts, userId };
 }
 
 export async function action({ request }: Route.ActionArgs) {
@@ -77,6 +92,19 @@ export async function action({ request }: Route.ActionArgs) {
             data: { body, imageUrl, authorId: userId },
         });
 
+        return { ok: true };
+    }
+
+    if (intent === "edit") {
+        const postId = formData.get("postId") as string;
+        const body = (formData.get("body") as string)?.trim();
+        if (!postId || !body) return { error: "Post ID and body are required" };
+        // Only allow editing your own posts
+        const post = await prisma.post.findUnique({ where: { id: postId } });
+        if (!post || post.authorId !== userId) {
+            return { error: "Not authorized" };
+        }
+        await prisma.post.update({ where: { id: postId }, data: { body } });
         return { ok: true };
     }
 
@@ -315,17 +343,21 @@ export default function Feed({ loaderData, actionData }: Route.ComponentProps) {
 function PostCard({
     post,
     isOwner,
+    onEdit,
 }: {
     post: {
         id: string;
         body: string;
         imageUrl: string | null;
         createdAt: Date | string;
-        author: { id: string; name: string };
+        author: { id: string; name: string; profile?: { pfpUrl?: string } };
     };
     isOwner: boolean;
+    onEdit?: (id: string, body: string) => void;
 }) {
     const fetcher = useFetcher();
+    const [editing, setEditing] = useState(false);
+    const [editBody, setEditBody] = useState(post.body);
     const isDeleting = fetcher.state !== "idle" && fetcher.formData?.get("postId") === post.id;
 
     if (isDeleting) return null; // optimistic removal
@@ -336,9 +368,18 @@ function PostCard({
                 {/* Author row */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-200 to-amber-400 dark:from-amber-700 dark:to-amber-900 flex items-center justify-center text-sm font-bold text-white shadow-sm">
-                            {post.author.name.charAt(0).toUpperCase()}
-                        </div>
+                        {post.author?.profile?.pfpUrl ? (
+                            <img
+                                src={post.author.profile.pfpUrl}
+                                alt={post.author.name}
+                                className="w-10 h-10 rounded-full object-cover border border-gray-300 dark:border-gray-700"
+                                onError={e => { e.currentTarget.src = "/default-pfp.png"; }}
+                            />
+                        ) : (
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-200 to-amber-400 dark:from-amber-700 dark:to-amber-900 flex items-center justify-center text-sm font-bold text-white shadow-sm">
+                                {post.author.name.charAt(0).toUpperCase()}
+                            </div>
+                        )}
                         <div>
                             <p className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
                                 {post.author.name}
@@ -351,27 +392,57 @@ function PostCard({
                             </time>
                         </div>
                     </div>
-                    {isOwner && (
-                        <fetcher.Form method="post">
-                            <input type="hidden" name="intent" value="delete" />
-                            <input type="hidden" name="postId" value={post.id} />
+                    {isOwner && !editing && (
+                        <div className="flex gap-2">
                             <button
-                                type="submit"
-                                className="text-gray-400 hover:text-red-500 focus:outline-none focus:text-red-500 transition-colors p-1 rounded-lg"
-                                aria-label="Delete this post"
+                                type="button"
+                                className="text-gray-400 hover:text-amber-600 focus:outline-none transition-colors p-1 rounded-lg"
+                                aria-label="Edit this post"
+                                onClick={() => setEditing(true)}
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true">
-                                    <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
+                                    <path d="M17.211 6.293a2.25 2.25 0 0 0 0-3.182l-.322-.322a2.25 2.25 0 0 0-3.182 0l-8.1 8.1a2.25 2.25 0 0 0-.573.97l-.7 2.8a.75.75 0 0 0 .91.91l2.8-.7a2.25 2.25 0 0 0 .97-.573l8.1-8.1ZM15.8 2.889a.75.75 0 0 1 1.06 1.06l-.322.322-1.06-1.06.322-.322ZM14.74 3.95l1.06 1.06-8.1 8.1a.75.75 0 0 1-.323.194l-2.8.7.7-2.8a.75.75 0 0 1 .194-.323l8.1-8.1Z" />
                                 </svg>
                             </button>
+                            <fetcher.Form method="post">
+                                <input type="hidden" name="intent" value="delete" />
+                                <input type="hidden" name="postId" value={post.id} />
+                                <button
+                                    type="submit"
+                                    className="text-gray-400 hover:text-red-500 focus:outline-none focus:text-red-500 transition-colors p-1 rounded-lg"
+                                    aria-label="Delete this post"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true">
+                                        <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
+                                    </svg>
+                                </button>
+                            </fetcher.Form>
+                        </div>
+                    )}
+                    {isOwner && editing && (
+                        <fetcher.Form method="post" className="flex gap-2 items-center">
+                            <input type="hidden" name="intent" value="edit" />
+                            <input type="hidden" name="postId" value={post.id} />
+                            <textarea
+                                name="body"
+                                value={editBody}
+                                onChange={e => setEditBody(e.target.value)}
+                                className="w-64 px-2 py-1 rounded border border-gray-300 dark:border-gray-700 text-sm"
+                                maxLength={500}
+                                required
+                            />
+                            <button type="submit" className="text-amber-600 font-medium px-2 py-1 rounded hover:bg-amber-50 dark:hover:bg-amber-900">Save</button>
+                            <button type="button" className="text-gray-400 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800" onClick={() => setEditing(false)}>Cancel</button>
                         </fetcher.Form>
                     )}
                 </div>
 
                 {/* Body */}
-                <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">
-                    {post.body}
-                </p>
+                {editing ? null : (
+                    <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">
+                        {post.body}
+                    </p>
+                )}
             </div>
 
             {/* Image */}

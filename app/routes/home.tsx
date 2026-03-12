@@ -1,8 +1,8 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import type { Route } from "./+types/home";
 import { prisma } from "../lib/db.server";
 import { getUserId } from "../lib/session.server";
-import { redirect, Form, useNavigation } from "react-router";
+import { redirect, Form, useNavigation, useFetcher } from "react-router";
 import CoffeeCard from "../components/CoffeeCard";
 import { getRecommendationsForUser, getTrendingRecipes } from "../lib/recommendations.server";
 
@@ -120,12 +120,23 @@ export async function action({ request }: Route.ActionArgs) {
 
 export default function Home({ loaderData }: Route.ComponentProps) {
   const { recipes, userLikes, userSaves, userId, recommendations, searchQuery } = loaderData;
+  const [search, setSearch] = useState(searchQuery || "");
+  const fetcher = useFetcher();
   const [reloadKey, setReloadKey] = useState(0);
 
-  // Callback to reload home feed
-  const handleLikeSave = useCallback(() => {
-    setReloadKey((k) => k + 1);
-  }, []);
+  // Callback to reload home feed after like/save
+  const handleLikeSave = () => setReloadKey((k) => k + 1);
+
+  // Debounced instant search
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      fetcher.load(`/home?search=${encodeURIComponent(search)}`);
+    }, 250);
+    return () => clearTimeout(timeout);
+  }, [search]);
+
+  // Use fetcher data if available, else loaderData
+  const data = fetcher.data || loaderData;
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-6 sm:py-8" key={reloadKey}>
@@ -140,15 +151,17 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         </p>
 
         {/* Search Bar */}
-        <Form method="get" className="max-w-2xl mx-auto">
+        <Form method="get" className="max-w-2xl mx-auto" onSubmit={e => e.preventDefault()}>
           <div className="relative">
             <input
               type="search"
               name="search"
-              defaultValue={searchQuery}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
               placeholder="Search recipes, ingredients, brew methods..."
               className="w-full px-6 py-4 pl-14 rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all"
               aria-label="Search recipes"
+              autoComplete="off"
             />
             <svg
               className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
@@ -164,7 +177,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
               />
             </svg>
-            {searchQuery && (
+            {search && (
               <a
                 href="/"
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
@@ -178,7 +191,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </div>
         </Form>
       </section>      {/* For You / Trending Section - Hide when searching */}
-      {!searchQuery && recommendations.length > 0 && (
+      {!search && data.recommendations.length > 0 && (
         <section className="mb-8 sm:mb-12" aria-labelledby="recommendations-heading">
           <div className="flex items-center justify-between mb-4">
             <h2 id="recommendations-heading" className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
@@ -199,7 +212,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               : "Popular recipes loved by the CoffeeMixer community"}
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {recommendations.map((recipe) => (
+            {(data.recommendations as any[]).map((recipe) => (
               <CoffeeCard
                 key={recipe.id}
                 id={recipe.id}
@@ -211,8 +224,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 author={recipe.author?.name || "CoffeeMixer"}
                 authorId={recipe.author?.id}
                 likes={recipe._count.likes}
-                liked={userLikes.includes(recipe.id)}
-                saved={userSaves.includes(recipe.id)}
+                liked={data.userLikes.includes(recipe.id)}
+                saved={data.userSaves.includes(recipe.id)}
                 imageUrl={recipe.imageUrl}
                 onLikeSave={handleLikeSave}
               />
@@ -222,13 +235,13 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       )}
 
       {/* Search Results */}
-      {searchQuery && (
+      {search && (
         <>
-          {recipes.length === 0 ? (
+          {data.recipes.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-5xl mb-4" aria-hidden="true">🔍</p>
               <p className="text-gray-500 dark:text-gray-400 text-lg mb-2">
-                No recipes found for "{searchQuery}"
+                No recipes found for "{search}"
               </p>
               <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">
                 Try a different search term or browse recommendations above
@@ -241,17 +254,17 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               </a>
             </div>
           ) : (
-            <section aria-label={`${recipes.length} search results`}>
+            <section aria-label={`${data.recipes.length} search results`}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                  Search Results for "{searchQuery}"
+                  Search Results for "{search}"
                 </h2>
                 <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {recipes.length} {recipes.length === 1 ? "result" : "results"}
+                  {data.recipes.length} {data.recipes.length === 1 ? "result" : "results"}
                 </span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {recipes.map((recipe) => (
+                {(data.recipes as any[]).map((recipe) => (
                   <CoffeeCard
                     key={recipe.id}
                     id={recipe.id}
@@ -263,8 +276,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                     author={recipe.author?.name || "CoffeeMixer"}
                     authorId={recipe.author?.id}
                     likes={recipe._count.likes}
-                    liked={userLikes.includes(recipe.id)}
-                    saved={userSaves.includes(recipe.id)}
+                    liked={data.userLikes.includes(recipe.id)}
+                    saved={data.userSaves.includes(recipe.id)}
                     imageUrl={recipe.imageUrl}
                     onLikeSave={handleLikeSave}
                   />

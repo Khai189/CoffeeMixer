@@ -1,4 +1,4 @@
-import { Link, useFetcher } from "react-router";
+import { Link, useFetcher, Form } from "react-router";
 
 interface CoffeeCardProps {
     id: string;
@@ -13,7 +13,9 @@ interface CoffeeCardProps {
     liked?: boolean;
     saved?: boolean;
     imageUrl?: string | null;
+    authorPfpUrl?: string | null;
     onLikeSave?: () => void;
+    isOwner?: boolean;
 }
 
 const difficultyColors = {
@@ -44,7 +46,9 @@ export default function CoffeeCard({
     liked = false,
     saved = false,
     imageUrl,
+    authorPfpUrl,
     onLikeSave,
+    isOwner,
 }: CoffeeCardProps) {
     const likeFetcher = useFetcher();
     const saveFetcher = useFetcher();
@@ -82,6 +86,14 @@ export default function CoffeeCard({
                     <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-950 flex items-center justify-center text-xl" aria-hidden="true">
                         {brewMethodEmoji[brewMethod] ?? "☕"}
                     </div>
+                    )}
+                    {authorPfpUrl && (
+                        <img
+                            src={authorPfpUrl}
+                            alt={author}
+                            className="w-10 h-10 rounded-full object-cover border border-gray-300 dark:border-gray-700"
+                            onError={e => { e.currentTarget.src = "/default-pfp.png"; }}
+                        />
                     )}
                     <div>
                         <Link
@@ -146,6 +158,26 @@ export default function CoffeeCard({
                     </saveFetcher.Form>
                 </div>
             </div>
+            {isOwner && (
+                <div className="flex gap-2 mt-2">
+                    <Link
+                        to={`/recipe/${id}`}
+                        className="px-3 py-1 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900 font-medium text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                    >
+                        Edit
+                    </Link>
+                    <Form method="post" action={`/recipe/${id}`}>
+                        <input type="hidden" name="intent" value="delete" />
+                        <button
+                            type="submit"
+                            className="px-3 py-1 rounded-lg bg-red-50 dark:bg-red-950 text-red-600 hover:bg-red-100 dark:hover:bg-red-900 font-medium text-xs focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                            onClick={e => { if (!window.confirm("Delete this recipe?")) e.preventDefault(); }}
+                        >
+                            Delete
+                        </button>
+                    </Form>
+                </div>
+            )}
             </div>
         </article>
     );

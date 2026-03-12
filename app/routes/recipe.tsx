@@ -2,13 +2,14 @@ import type { Route } from "./+types/recipe";
 import { prisma } from "../lib/db.server";
 import { getUserId } from "../lib/session.server";
 import { Link, useFetcher, redirect } from "react-router";
+import React from "react";
 
 export async function loader({ params, request }: Route.LoaderArgs) {
     const userId = await getUserId(request);
     const recipe = await prisma.recipe.findUnique({
         where: { id: params.id },
         include: {
-            author: { select: { id: true, name: true } },
+            author: { select: { id: true, name: true, profile: { select: { pfpUrl: true } } } },
             _count: { select: { likes: true, savedBy: true } },
         },
     });
@@ -57,9 +58,34 @@ export async function action({ request, params }: Route.ActionArgs) {
         } else {
             await prisma.savedRecipe.create({ data: { userId, recipeId } });
         }
+    } else if (intent === "edit") {
+        const name = (formData.get("name") as string)?.trim();
+        const description = (formData.get("description") as string)?.trim();
+        const ingredients = (formData.get("ingredients") as string)?.split(",").map(s => s.trim()).filter(Boolean) || [];
+        const instructions = (formData.get("instructions") as string)?.trim();
+        const brewMethod = (formData.get("brewMethod") as string)?.trim();
+        const difficulty = (formData.get("difficulty") as string)?.trim();
+        // Only allow editing your own recipe
+        const recipe = await prisma.recipe.findUnique({ where: { id: recipeId } });
+        if (!recipe || recipe.authorId !== userId) {
+            return { error: "Not authorized" };
+        }
+        await prisma.recipe.update({
+            where: { id: recipeId },
+            data: { name, description, ingredients, instructions, brewMethod, difficulty },
+        });
+        return { ok: true };
     } else if (intent === "comment") {
         if (!userId) return redirect("/login");
         // ...existing comment logic...
+    } else if (intent === "delete") {
+        // Only allow deleting your own recipe
+        const recipe = await prisma.recipe.findUnique({ where: { id: recipeId } });
+        if (!recipe || recipe.authorId !== userId) {
+            return { error: "Not authorized" };
+        }
+        await prisma.recipe.delete({ where: { id: recipeId } });
+        return redirect("/dashboard"); // Redirect after delete
     }
 
     return { ok: true };
@@ -88,9 +114,14 @@ const difficultyColors: Record<string, string> = {
 };
 
 export default function RecipePage({ loaderData }: Route.ComponentProps) {
-    const { recipe, liked, saved } = loaderData;
+    const { recipe, liked, saved, userId } = loaderData;
     const likeFetcher = useFetcher();
     const saveFetcher = useFetcher();
+    const editFetcher = useFetcher();
+    const deleteFetcher = useFetcher();
+
+    const isOwner = userId && recipe.author?.id === userId;
+    const [showEdit, setShowEdit] = React.useState(false);
 
     const isLiked = likeFetcher.formData ? !liked : liked;
     const isSaved = saveFetcher.formData ? !saved : saved;
@@ -109,9 +140,18 @@ export default function RecipePage({ loaderData }: Route.ComponentProps) {
                 <div className="p-6 border-b border-gray-100 dark:border-gray-800">
                     <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-950 flex items-center justify-center text-2xl" aria-hidden="true">
-                                {brewMethodEmoji[recipe.brewMethod] ?? "☕"}
-                            </div>
+                            {recipe.author?.profile?.pfpUrl ? (
+                                <img
+                                    src={recipe.author.profile.pfpUrl}
+                                    alt={recipe.author.name}
+                                    className="w-12 h-12 rounded-full object-cover border border-gray-300 dark:border-gray-700"
+                                    onError={e => { e.currentTarget.src = "/default-pfp.png"; }}
+                                />
+                            ) : (
+                                <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-950 flex items-center justify-center text-2xl" aria-hidden="true">
+                                    {brewMethodEmoji[recipe.brewMethod] ?? "☕"}
+                                </div>
+                            )}
                             <div>
                                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{recipe.name}</h1>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -181,7 +221,69 @@ export default function RecipePage({ loaderData }: Route.ComponentProps) {
                             {isSaved ? "Saved" : "Save"}
                         </button>
                     </saveFetcher.Form>
+                    {isOwner && (
+                        <>
+                            <button
+                                type="button"
+                                className="px-4 py-2 rounded-xl font-medium bg-blue-50 dark:bg-blue-950 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                                onClick={() => setShowEdit(true)}
+                            >
+                                Edit
+                            </button>
+                            <deleteFetcher.Form method="post">
+                                <input type="hidden" name="intent" value="delete" />
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 rounded-xl font-medium bg-red-50 dark:bg-red-950 text-red-600 hover:bg-red-100 dark:hover:bg-red-900 transition-colors focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                                    aria-label="Delete recipe"
+                                    onClick={e => { if (!window.confirm("Delete this recipe?")) e.preventDefault(); }}
+                                >
+                                    Delete
+                                </button>
+                            </deleteFetcher.Form>
+                        </>
+                    )}
                 </div>
+
+                {/* Edit Modal */}
+                {isOwner && showEdit && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                        <editFetcher.Form method="post" className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8 w-full max-w-lg relative">
+                            <input type="hidden" name="intent" value="edit" />
+                            <button type="button" className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200" onClick={() => setShowEdit(false)} aria-label="Close">✕</button>
+                            <h2 className="text-xl font-bold mb-6">Edit Recipe</h2>
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium mb-1">Name</label>
+                                <input name="name" defaultValue={recipe.name} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-gray-900 dark:text-white" required />
+                            </div>
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium mb-1">Description</label>
+                                <textarea name="description" defaultValue={recipe.description} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-gray-900 dark:text-white" rows={3} />
+                            </div>
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium mb-1">Ingredients (comma separated)</label>
+                                <input name="ingredients" defaultValue={recipe.ingredients.join(", ")} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-gray-900 dark:text-white" />
+                            </div>
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium mb-1">Instructions</label>
+                                <textarea name="instructions" defaultValue={recipe.instructions} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-gray-900 dark:text-white" rows={5} />
+                            </div>
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium mb-1">Brew Method</label>
+                                <input name="brewMethod" defaultValue={recipe.brewMethod} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-gray-900 dark:text-white" />
+                            </div>
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium mb-1">Difficulty</label>
+                                <select name="difficulty" defaultValue={recipe.difficulty} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-gray-900 dark:text-white">
+                                    <option value="easy">Easy</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="hard">Hard</option>
+                                </select>
+                            </div>
+                            <button type="submit" className="w-full py-3 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700 transition-colors">Save Changes</button>
+                        </editFetcher.Form>
+                    </div>
+                )}
             </article>
         </main>
     );

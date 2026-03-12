@@ -51,6 +51,7 @@ export default function UserProfilePage({ loaderData }: Route.ComponentProps) {
                     src={profile.pfpUrl || "/default-pfp.png"}
                     alt="Profile"
                     className="w-20 h-20 rounded-full object-cover border-2 border-gray-300"
+                    onError={e => { e.currentTarget.src = "/default-pfp.png"; }}
                 />
                 <div className="flex-1">
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{user.name}</h1>

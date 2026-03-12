@@ -27,7 +27,7 @@ export async function loader({ request }: Route.LoaderArgs) {
                 include: {
                     recipe: {
                         include: {
-                            author: { select: { id: true, name: true } },
+                            author: { select: { id: true, name: true, profile: { select: { pfpUrl: true } } } },
                             _count: { select: { likes: true, savedBy: true } },
                         },
                     },
@@ -38,7 +38,7 @@ export async function loader({ request }: Route.LoaderArgs) {
             prisma.recipe.findMany({
                 where: { authorId: userId },
                 include: {
-                    author: { select: { id: true, name: true } },
+                    author: { select: { id: true, name: true, profile: { select: { pfpUrl: true } } } },
                     _count: { select: { likes: true, savedBy: true } },
                 },
                 orderBy: { createdAt: "desc" },
@@ -58,6 +58,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
     return {
         userName: user?.name || "Coffee Lover",
+        userId,
         savedRecipes: savedRecipes.map((sr) => sr.recipe),
         myRecipes,
         userLikes,
@@ -167,7 +168,9 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
                                 liked={userLikes.includes(recipe.id)}
                                 saved={userSaves.includes(recipe.id)}
                                 imageUrl={recipe.imageUrl}
+                                authorPfpUrl={recipe.author?.profile?.pfpUrl || null}
                                 onLikeSave={handleLikeSave}
+                                isOwner={recipe.author?.id === loaderData.userId}
                             />
                         ))}
                     </div>
@@ -208,7 +211,9 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
                                 liked={userLikes.includes(recipe.id)}
                                 saved={userSaves.includes(recipe.id)}
                                 imageUrl={recipe.imageUrl}
+                                authorPfpUrl={recipe.author?.profile?.pfpUrl || null}
                                 onLikeSave={handleLikeSave}
+                                isOwner={recipe.author?.id === loaderData.userId}
                             />
                         ))}
                     </div>

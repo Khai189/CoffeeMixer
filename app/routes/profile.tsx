@@ -148,6 +148,7 @@ export default function ProfilePage({ loaderData, actionData }: Route.ComponentP
                             alt="Profile"
                             className="w-20 h-20 rounded-full object-cover cursor-pointer border-2 border-gray-300"
                             onClick={() => document.getElementById("pfp-upload")?.click()}
+                            onError={e => { e.currentTarget.src = "/default-pfp.png"; }}
                         />
                         <input
                             id="pfp-upload"
