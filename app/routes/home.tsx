@@ -48,6 +48,7 @@ export async function loader({ request }: Route.LoaderArgs) {
         { description: { contains: searchQuery, mode: "insensitive" } },
         { brewMethod: { contains: searchQuery, mode: "insensitive" } },
         { difficulty: { contains: searchQuery, mode: "insensitive" } },
+        { author: { name: { contains: searchQuery, mode: "insensitive" } } },
         { ingredients: { has: searchQuery } },
       ],
     };
@@ -258,17 +259,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
               />
             </svg>
-            {search && (
-              <a
-                href="/"
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                aria-label="Clear search"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </a>
-            )}
           </div>
         </Form>
       </section>      {/* For You / Trending Section - Hide when searching */}
