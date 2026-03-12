@@ -190,8 +190,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const [search, setSearch] = useState(searchQuery || "");
   
   // State to hold the displayed list of items to support "Load More" (append) pattern
-  const [displayRecommendations, setDisplayRecommendations] = useState(recommendations);
-  const [displayRecipes, setDisplayRecipes] = useState(recipes);
+  const [displayRecommendations, setDisplayRecommendations] = useState(recommendations || []);
+  const [displayRecipes, setDisplayRecipes] = useState(recipes || []);
   
   // Pagination state
   const [recPage, setRecPage] = useState(1);
@@ -201,6 +201,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const fetcher = useFetcher();
   const isFirstRun = useRef(true);
   const loadMoreFetcher = useFetcher();
+  const lastProcessedData = useRef<any>(null);
 
   // Callback to reload home feed after like/save
   const handleLikeSave = useCallback(() => {
@@ -228,12 +229,13 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
   // Append data when loadMoreFetcher completes
   useEffect(() => {
-    if (loadMoreFetcher.data) {
+    if (loadMoreFetcher.data && loadMoreFetcher.data !== lastProcessedData.current) {
+      lastProcessedData.current = loadMoreFetcher.data;
       if (search) {
-        setDisplayRecipes(prev => [...prev, ...loadMoreFetcher.data.recipes]);
+        setDisplayRecipes(prev => [...(prev || []), ...(loadMoreFetcher.data?.recipes || [])]);
         setSearchPage(prev => prev + 1);
       } else {
-        setDisplayRecommendations(prev => [...prev, ...loadMoreFetcher.data.recommendations]);
+        setDisplayRecommendations(prev => [...(prev || []), ...(loadMoreFetcher.data?.recommendations || [])]);
         setRecPage(prev => prev + 1);
       }
     }
@@ -262,13 +264,16 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     const source = fetcher.data || loaderData;
     // Only reset lists if we are essentially resetting the view (new search or initial load)
     // or if the fetcher just returned a fresh page 1 search result
-    setDisplayRecipes(source.recipes);
-    setDisplayRecommendations(source.recommendations);
-    if (fetcher.data) setSearchPage(1); // Reset search page on new search
+    if (source) {
+      setDisplayRecipes(source.recipes || []);
+      setDisplayRecommendations(source.recommendations || []);
+      if (fetcher.data) setSearchPage(1); // Reset search page on new search
+    }
   }, [fetcher.data, loaderData]);
 
   const activeList = search ? displayRecipes : displayRecommendations;
-  const showLoadMore = activeList.length > 0 && activeList.length % PAGE_SIZE === 0 && (loadMoreFetcher.state === "idle");
+  const safeList = activeList || [];
+  const showLoadMore = safeList.length > 0 && safeList.length % PAGE_SIZE === 0 && (loadMoreFetcher.state === "idle");
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-6 sm:py-8">

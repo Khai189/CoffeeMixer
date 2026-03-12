@@ -7,7 +7,7 @@ interface CoffeeCardProps {
     description: string;
     brewMethod: string;
     difficulty: "easy" | "medium" | "hard";
-    ingredients: string[];
+    ingredients?: string[];
     author?: string;
     authorId?: string;
     likes?: number;
@@ -40,7 +40,7 @@ export default function CoffeeCard({
     description,
     brewMethod,
     difficulty,
-    ingredients,
+    ingredients = [],
     author = "CoffeeMixer",
     authorId,
     likes = 0,
