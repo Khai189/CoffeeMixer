@@ -36,11 +36,16 @@ export async function loader({ request }: Route.LoaderArgs) {
     });
 
     function checkImage(url: string | null | undefined, fallback: string) {
-        if (typeof url === "string" && url.startsWith("/uploads/")) {
-            const imagePath = join(process.cwd(), "public", url);
-            if (!existsSync(imagePath)) return fallback;
+        try {
+            if (typeof url === "string" && url.startsWith("/uploads/")) {
+                const imagePath = join(process.cwd(), "public", url);
+                if (!existsSync(imagePath)) return fallback;
+            }
+            return typeof url === "string" && url.length > 0 ? url : fallback;
+        } catch (err) {
+            // If Railway/serverless doesn't support fs, always fallback
+            return fallback;
         }
-        return typeof url === "string" && url.length > 0 ? url : fallback;
     }
 
     // Patch profile image for user

@@ -82,13 +82,18 @@ export async function loader({ request }: Route.LoaderArgs) {
     userSaves = saves.map((s) => s.recipeId);
   }
 
-  // Utility for checking file existence (ESM compatible)
+  // Utility for checking file existence (ESM compatible, robust for serverless)
   function checkImage(url: string | null | undefined, fallback: string) {
-    if (typeof url === "string" && url.startsWith("/uploads/")) {
-      const imagePath = join(process.cwd(), "public", url);
-      if (!existsSync(imagePath)) return fallback;
+    try {
+      if (typeof url === "string" && url.startsWith("/uploads/")) {
+        const imagePath = join(process.cwd(), "public", url);
+        if (!existsSync(imagePath)) return fallback;
+      }
+      return typeof url === "string" && url.length > 0 ? url : fallback;
+    } catch (err) {
+      // In serverless (Railway), fs may throw; always fallback
+      return fallback;
     }
-    return typeof url === "string" && url.length > 0 ? url : fallback;
   }
 
   // Patch recipe and pfp images for recommendations and search results
