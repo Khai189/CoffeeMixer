@@ -27,7 +27,40 @@ export async function loader({ params, request }: Route.LoaderArgs) {
         saved = !!saveRecord;
     }
 
-    return { recipe, liked, saved, userId };
+    // Check if recipe image file exists
+    let recipeImageUrl = recipe.imageUrl || "/default-recipe.png";
+    if (recipe.imageUrl && recipe.imageUrl.startsWith("/uploads/")) {
+        const fs = require("fs");
+        const path = require("path");
+        const imagePath = path.join(process.cwd(), "public", recipe.imageUrl);
+        if (!fs.existsSync(imagePath)) {
+            recipeImageUrl = "/default-recipe.png";
+        }
+    }
+    // Check if author profile image file exists
+    let authorPfpUrl = recipe.author?.profile?.pfpUrl || "/default-pfp.png";
+    if (recipe.author?.profile?.pfpUrl && recipe.author.profile.pfpUrl.startsWith("/uploads/")) {
+        const fs = require("fs");
+        const path = require("path");
+        const pfpPath = path.join(process.cwd(), "public", recipe.author.profile.pfpUrl);
+        if (!fs.existsSync(pfpPath)) {
+            authorPfpUrl = "/default-pfp.png";
+        }
+    }
+    // Patch recipe object to always have valid imageUrl and authorPfpUrl
+    const patchedRecipe = {
+        ...recipe,
+        imageUrl: recipeImageUrl,
+        author: {
+            ...recipe.author,
+            profile: {
+                ...recipe.author?.profile,
+                pfpUrl: authorPfpUrl,
+            },
+        },
+    };
+
+    return { recipe: patchedRecipe, liked, saved, userId };
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
