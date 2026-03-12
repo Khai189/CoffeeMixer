@@ -3,6 +3,8 @@ import { prisma } from "../lib/db.server";
 import { requireUserId } from "../lib/session.server";
 import { redirect, Form, useNavigation, useFetcher } from "react-router";
 import { useState } from "react";
+import { existsSync } from "fs";
+import { join } from "path";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -33,13 +35,10 @@ export async function loader({ request }: Route.LoaderArgs) {
         take: 10,
     });
 
-    // Utility for checking file existence
-    const fs = require("fs");
-    const path = require("path");
     function checkImage(url: string | null | undefined, fallback: string) {
         if (typeof url === "string" && url.startsWith("/uploads/")) {
-            const imagePath = path.join(process.cwd(), "public", url);
-            if (!fs.existsSync(imagePath)) return fallback;
+            const imagePath = join(process.cwd(), "public", url);
+            if (!existsSync(imagePath)) return fallback;
         }
         return typeof url === "string" && url.length > 0 ? url : fallback;
     }

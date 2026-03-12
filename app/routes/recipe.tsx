@@ -3,6 +3,8 @@ import { prisma } from "../lib/db.server";
 import { getUserId } from "../lib/session.server";
 import { Link, useFetcher, redirect } from "react-router";
 import React from "react";
+import { existsSync } from "fs";
+import { join } from "path";
 
 export async function loader({ params, request }: Route.LoaderArgs) {
     const userId = await getUserId(request);
@@ -30,20 +32,16 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     // Check if recipe image file exists
     let recipeImageUrl = recipe.imageUrl || "/default-recipe.png";
     if (recipe.imageUrl && recipe.imageUrl.startsWith("/uploads/")) {
-        const fs = require("fs");
-        const path = require("path");
-        const imagePath = path.join(process.cwd(), "public", recipe.imageUrl);
-        if (!fs.existsSync(imagePath)) {
+        const imagePath = join(process.cwd(), "public", recipe.imageUrl);
+        if (!existsSync(imagePath)) {
             recipeImageUrl = "/default-recipe.png";
         }
     }
     // Check if author profile image file exists
     let authorPfpUrl = recipe.author?.profile?.pfpUrl || "/default-pfp.png";
     if (recipe.author?.profile?.pfpUrl && recipe.author.profile.pfpUrl.startsWith("/uploads/")) {
-        const fs = require("fs");
-        const path = require("path");
-        const pfpPath = path.join(process.cwd(), "public", recipe.author.profile.pfpUrl);
-        if (!fs.existsSync(pfpPath)) {
+        const pfpPath = join(process.cwd(), "public", recipe.author.profile.pfpUrl);
+        if (!existsSync(pfpPath)) {
             authorPfpUrl = "/default-pfp.png";
         }
     }
