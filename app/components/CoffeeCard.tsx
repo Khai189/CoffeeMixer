@@ -1,4 +1,5 @@
 import { Link, useFetcher, Form } from "react-router";
+import { useEffect } from "react";
 
 interface CoffeeCardProps {
     id: string;
@@ -60,12 +61,17 @@ export default function CoffeeCard({
     const displayLikes = likes;
 
     // Call onLikeSave when like/save completes
-    if (onLikeSave && likeFetcher.state === "idle" && likeFetcher.data) {
-        onLikeSave();
-    }
-    if (onLikeSave && saveFetcher.state === "idle" && saveFetcher.data) {
-        onLikeSave();
-    }
+    useEffect(() => {
+        if (onLikeSave && likeFetcher.state === "idle" && likeFetcher.data) {
+            onLikeSave();
+        }
+    }, [likeFetcher.state, likeFetcher.data, onLikeSave]);
+
+    useEffect(() => {
+        if (onLikeSave && saveFetcher.state === "idle" && saveFetcher.data) {
+            onLikeSave();
+        }
+    }, [saveFetcher.state, saveFetcher.data, onLikeSave]);
 
     return (
         <article className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden hover:shadow-lg hover:border-amber-300 dark:hover:border-amber-700 transition-shadow" aria-label={`${name} by ${author}`}>
