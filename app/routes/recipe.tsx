@@ -92,7 +92,12 @@ export async function action({ request, params }: Route.ActionArgs) {
     } else if (intent === "edit") {
         const name = (formData.get("name") as string)?.trim();
         const description = (formData.get("description") as string)?.trim();
-        const ingredients = (formData.get("ingredients") as string)?.split(",").map(s => s.trim()).filter(Boolean) || [];
+        const ingredientsRaw = formData.get("ingredients");
+        const ingredients = typeof ingredientsRaw === "string"
+            ? ingredientsRaw.split(",").map(s => s.trim()).filter(Boolean)
+            : Array.isArray(ingredientsRaw)
+                ? ingredientsRaw.map(s => String(s).trim()).filter(Boolean)
+                : [];
         const instructions = (formData.get("instructions") as string)?.trim();
         const brewMethod = (formData.get("brewMethod") as string)?.trim();
         const difficulty = (formData.get("difficulty") as string)?.trim();
@@ -297,11 +302,15 @@ export default function RecipePage({ loaderData }: Route.ComponentProps) {
                             </div>
                             <div className="mb-4">
                                 <label className="block text-sm font-medium mb-1">Description</label>
-                                <textarea name="description" defaultValue={recipe.description} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-gray-900 dark:text-white" rows={3} />
+                                <textarea name="description" defaultValue={recipe.description ? recipe.description : "No description could be found"} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-gray-900 dark:text-white" rows={3} />
                             </div>
                             <div className="mb-4">
                                 <label className="block text-sm font-medium mb-1">Ingredients (comma separated)</label>
-                                <input name="ingredients" defaultValue={recipe.ingredients.join(", ")} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-gray-900 dark:text-white" />
+                                <input
+                                    name="ingredients"
+                                    defaultValue={Array.isArray(recipe.ingredients) ? recipe.ingredients.join(", ") : typeof recipe.ingredients === "string" ? recipe.ingredients : ""}
+                                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-gray-900 dark:text-white"
+                                />
                             </div>
                             <div className="mb-4">
                                 <label className="block text-sm font-medium mb-1">Instructions</label>
