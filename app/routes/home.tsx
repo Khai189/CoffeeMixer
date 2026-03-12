@@ -214,6 +214,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
   // Use fetcher data if available, else loaderData
   const data = fetcher.data || loaderData;
+  const displayRecommendations = data?.recommendations || [];
+  const displayRecipes = data?.recipes || [];
+  const currentLikes = data?.userLikes || [];
+  const currentSaves = data?.userSaves || [];
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-6 sm:py-8">
@@ -268,7 +272,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </div>
         </Form>
       </section>      {/* For You / Trending Section - Hide when searching */}
-      {!search && data.recommendations.length > 0 && (
+      {!search && displayRecommendations.length > 0 && (
         <section className="mb-8 sm:mb-12" aria-labelledby="recommendations-heading">
           <div className="flex items-center justify-between mb-4">
             <h2 id="recommendations-heading" className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
@@ -289,7 +293,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               : "Popular recipes loved by the CoffeeMixer community"}
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {(data.recommendations as any[]).map((recipe) => (
+            {(displayRecommendations as any[]).map((recipe) => (
               <CoffeeCard
                 key={recipe.id}
                 id={recipe.id}
@@ -301,8 +305,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 author={recipe.author?.name || "CoffeeMixer"}
                 authorId={recipe.author?.id}
                 likes={recipe._count.likes}
-                liked={data.userLikes.includes(recipe.id)}
-                saved={data.userSaves.includes(recipe.id)}
+                liked={currentLikes.includes(recipe.id)}
+                saved={currentSaves.includes(recipe.id)}
                 imageUrl={recipe.imageUrl}
                 authorPfpUrl={recipe.author?.authorPfpUrl || null}
                 onLikeSave={handleLikeSave}
@@ -324,7 +328,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 Searching for recipes...
               </p>
             </div>
-          ) : data.recipes.length === 0 ? (
+          ) : displayRecipes.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-5xl mb-4" aria-hidden="true">🔍</p>
               <p className="text-gray-500 dark:text-gray-400 text-lg mb-2">
@@ -341,17 +345,17 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               </a>
             </div>
           ) : (
-            <section aria-label={`${data.recipes.length} search results`}>
+            <section aria-label={`${displayRecipes.length} search results`}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                   Search Results for "{search}"
                 </h2>
                 <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {data.recipes.length} {data.recipes.length === 1 ? "result" : "results"}
+                  {displayRecipes.length} {displayRecipes.length === 1 ? "result" : "results"}
                 </span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {(data.recipes as any[]).map((recipe) => (
+                {(displayRecipes as any[]).map((recipe) => (
                   <CoffeeCard
                     key={recipe.id}
                     id={recipe.id}
@@ -363,8 +367,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                     author={recipe.author?.name || "CoffeeMixer"}
                     authorId={recipe.author?.id}
                     likes={recipe._count.likes}
-                    liked={data.userLikes.includes(recipe.id)}
-                    saved={data.userSaves.includes(recipe.id)}
+                    liked={currentLikes.includes(recipe.id)}
+                    saved={currentSaves.includes(recipe.id)}
                     imageUrl={recipe.imageUrl}
                     authorPfpUrl={recipe.author?.authorPfpUrl || null}
                     onLikeSave={handleLikeSave}
