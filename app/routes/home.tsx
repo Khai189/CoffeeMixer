@@ -51,7 +51,7 @@ export async function loader({ request }: Route.LoaderArgs) {
         { description: { contains: searchQuery, mode: "insensitive" } },
         { brewMethod: { contains: searchQuery, mode: "insensitive" } },
         { difficulty: { contains: searchQuery, mode: "insensitive" } },
-        { ingredients: { has: searchQuery } },
+        { author: { name: { contains: searchQuery, mode: "insensitive" } } },
       ],
     };
 
@@ -375,7 +375,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       {/* Search Results */}
       {search && (
         <>
-          {fetcher.state !== 'idle' ? (
+          {fetcher.state !== 'idle' && displayRecipes.length === 0 ? (
             <div className="text-center py-16">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto" role="status">
                 <span className="sr-only">Loading...</span>
@@ -401,7 +401,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               </a>
             </div>
           ) : (
-            <section aria-label="Search results">
+            <section aria-label="Search results" className={fetcher.state !== 'idle' ? "opacity-50 transition-opacity" : ""}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                   Search Results for "{search}"

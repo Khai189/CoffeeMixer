@@ -10,7 +10,7 @@ import {
 import type { Route } from "./+types/root";
 import Navbar from "./components/Navbar";
 import { getUserId } from "./lib/session.server";
-import { getUserById } from "./lib/auth.server";
+import { prisma } from "./lib/db.server";
 import "./app.css";
 
 export const links: Route.LinksFunction = () => [
@@ -30,8 +30,23 @@ export const links: Route.LinksFunction = () => [
 export async function loader({ request }: Route.LoaderArgs) {
   const userId = await getUserId(request);
   if (!userId) return { user: null };
-  const user = await getUserById(userId);
-  return { user };
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      profile: { select: { pfpUrl: true } },
+    },
+  });
+
+  if (!user) return { user: null };
+
+  const pfpUrl = user.profile?.pfpUrl || "/default-pfp.png";
+
+  return {
+    user: { ...user, profile: { pfpUrl } },
+  };
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
