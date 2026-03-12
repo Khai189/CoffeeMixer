@@ -1,5 +1,5 @@
 import { Link, useFetcher, Form } from "react-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 interface CoffeeCardProps {
     id: string;
@@ -61,16 +61,20 @@ export default function CoffeeCard({
     const displayLikes = likes;
 
     // Call onLikeSave when like/save completes
+    const prevLikeState = useRef(likeFetcher.state);
     useEffect(() => {
-        if (onLikeSave && likeFetcher.state === "idle" && likeFetcher.data) {
+        if (onLikeSave && likeFetcher.state === "idle" && prevLikeState.current !== "idle" && likeFetcher.data) {
             onLikeSave();
         }
+        prevLikeState.current = likeFetcher.state;
     }, [likeFetcher.state, likeFetcher.data, onLikeSave]);
 
+    const prevSaveState = useRef(saveFetcher.state);
     useEffect(() => {
-        if (onLikeSave && saveFetcher.state === "idle" && saveFetcher.data) {
+        if (onLikeSave && saveFetcher.state === "idle" && prevSaveState.current !== "idle" && saveFetcher.data) {
             onLikeSave();
         }
+        prevSaveState.current = saveFetcher.state;
     }, [saveFetcher.state, saveFetcher.data, onLikeSave]);
 
     return (

@@ -3,6 +3,8 @@ import { prisma } from "../lib/db.server";
 import { requireUserId } from "../lib/session.server";
 import { Link } from "react-router";
 import CoffeeCard from "../components/CoffeeCard";
+import { useCallback, useState } from "react";
+import { useFetcher } from "react-router";
 import { existsSync } from "fs";
 import { join } from "path";
 
@@ -104,9 +106,17 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export default function Dashboard({ loaderData }: Route.ComponentProps) {
     const { userName, savedRecipes, myRecipes, userLikes, userSaves, stats } = loaderData;
+    const fetcher = useFetcher();
+    const [reloadKey, setReloadKey] = useState(0);
+
+    // Callback to reload dashboard
+    const handleLikeSave = useCallback(() => {
+        fetcher.load("/dashboard");
+        setReloadKey((k) => k + 1);
+    }, [fetcher]);
 
     return (
-        <main className="max-w-5xl mx-auto px-4 py-6 sm:py-8 space-y-8 sm:space-y-10">
+        <main className="max-w-5xl mx-auto px-4 py-6 sm:py-8 space-y-8 sm:space-y-10" key={reloadKey}>
             {/* Greeting + Create CTA */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                 <div>
@@ -196,6 +206,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
                                 saved={userSaves.includes(recipe.id)}
                                 imageUrl={recipe.imageUrl}
                                 authorPfpUrl={recipe.author?.profile?.pfpUrl || null}
+                                onLikeSave={handleLikeSave}
                                 isOwner={recipe.author?.id === loaderData.userId}
                             />
                         ))}
@@ -238,6 +249,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
                                 saved={userSaves.includes(recipe.id)}
                                 imageUrl={recipe.imageUrl}
                                 authorPfpUrl={recipe.author?.profile?.pfpUrl || null}
+                                onLikeSave={handleLikeSave}
                                 isOwner={recipe.author?.id === loaderData.userId}
                             />
                         ))}

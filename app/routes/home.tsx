@@ -312,7 +312,16 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       {/* Search Results */}
       {search && (
         <>
-          {data.recipes.length === 0 ? (
+          {fetcher.state !== 'idle' ? (
+            <div className="text-center py-16">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto" role="status">
+                <span className="sr-only">Loading...</span>
+              </div>
+              <p className="text-gray-500 dark:text-gray-400 text-lg mt-4">
+                Searching for recipes...
+              </p>
+            </div>
+          ) : data.recipes.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-5xl mb-4" aria-hidden="true">🔍</p>
               <p className="text-gray-500 dark:text-gray-400 text-lg mb-2">

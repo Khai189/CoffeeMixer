@@ -71,7 +71,7 @@ function calculateContentScore(
     let score = 0;
     
     // Already liked/saved? Deprioritize instead of exclude
-    if (userLikes.includes(recipe.id)) {
+    if (userLikes.includes(recipe.id) || userSaves.includes(recipe.id)) {
         score -= 100; // Large penalty, but still visible
     }
     
@@ -150,7 +150,7 @@ export async function getRecommendationsForUser(userId: string, limit: number = 
         // No profile yet - return popular recipes
         const recipes = await prisma.recipe.findMany({
             include: {
-                author: { select: { id: true, name: true } },
+                author: { select: { id: true, name: true, profile: { select: { pfpUrl: true } } } },
                 _count: { select: { likes: true, savedBy: true } },
             },
             orderBy: [
@@ -167,6 +167,14 @@ export async function getRecommendationsForUser(userId: string, limit: number = 
         select: { recipeId: true },
     });
     const likedRecipeIds = userLikes.map(l => l.recipeId);
+
+    // Get user's saved recipes to deprioritize them as well
+    const userSaves = await prisma.savedRecipe.findMany({
+        where: { userId },
+        select: { recipeId: true },
+    });
+    const savedRecipeIds = userSaves.map(s => s.recipeId);
+
     // 3. Find similar users (collaborative filtering)
     const allProfiles = await prisma.profile.findMany({
         where: { userId: { not: userId } },
@@ -180,10 +188,11 @@ export async function getRecommendationsForUser(userId: string, limit: number = 
         take: 50,
     });
     const similarUsers = allProfiles
+        .filter(p => p.user) // Ensure user relation exists
         .map(profile => ({
             userId: profile.userId,
             similarity: calculateUserSimilarity(userProfile, profile),
-            likedRecipes: profile.user.likes.map(l => l.recipeId),
+            likedRecipes: profile.user!.likes.map(l => l.recipeId),
         }))
         .filter(u => u.similarity > 40)
         .sort((a, b) => b.similarity - a.similarity)
@@ -201,14 +210,14 @@ export async function getRecommendationsForUser(userId: string, limit: number = 
     const allRecipes = await prisma.recipe.findMany({
         // Remove id: { notIn: likedRecipeIds }, so liked recipes are included
         include: {
-            author: { select: { id: true, name: true } },
+            author: { select: { id: true, name: true, profile: { select: { pfpUrl: true } } } },
             _count: { select: { likes: true, savedBy: true } },
         },
         take: 100,
     });
     // 6. Score each recipe
     const scoredRecipes = allRecipes.map(recipe => {
-        let score = calculateContentScore(recipe, userProfile, likedRecipeIds, [], false);
+        let score = calculateContentScore(recipe, userProfile, likedRecipeIds, savedRecipeIds, false);
         if (collaborativeRecipeIds.has(recipe.id)) {
             score += 30;
         }
@@ -228,7 +237,7 @@ export async function getTrendingRecipes(limit: number = 10) {
     
     return prisma.recipe.findMany({
         include: {
-            author: { select: { id: true, name: true } },
+            author: { select: { id: true, name: true, profile: { select: { pfpUrl: true } } } },
             _count: { select: { likes: true, savedBy: true } },
         },
         orderBy: [
