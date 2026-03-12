@@ -138,6 +138,14 @@ export default function RecipePage({ loaderData }: Route.ComponentProps) {
             <article className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
                 {/* Header */}
                 <div className="p-6 border-b border-gray-100 dark:border-gray-800">
+                    {recipe.imageUrl ? (
+                        <img
+                            src={recipe.imageUrl}
+                            alt={recipe.name}
+                            className="w-full h-48 object-cover rounded-xl mb-6 border border-gray-200 dark:border-gray-800"
+                            onError={e => { e.currentTarget.src = "/default-recipe.png"; }}
+                        />
+                    ) : null}
                     <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
                             {recipe.author?.profile?.pfpUrl ? (

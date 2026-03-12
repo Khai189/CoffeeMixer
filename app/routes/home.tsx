@@ -55,7 +55,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     recipes = await prisma.recipe.findMany({
       where,
       include: {
-        author: { select: { id: true, name: true } },
+        author: { select: { id: true, name: true, profile: { select: { pfpUrl: true } } } },
         _count: { select: { likes: true, savedBy: true } },
       },
       orderBy: { createdAt: "desc" },
@@ -227,6 +227,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 liked={data.userLikes.includes(recipe.id)}
                 saved={data.userSaves.includes(recipe.id)}
                 imageUrl={recipe.imageUrl}
+                authorPfpUrl={recipe.author?.profile?.pfpUrl || null}
                 onLikeSave={handleLikeSave}
               />
             ))}
@@ -279,6 +280,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                     liked={data.userLikes.includes(recipe.id)}
                     saved={data.userSaves.includes(recipe.id)}
                     imageUrl={recipe.imageUrl}
+                    authorPfpUrl={recipe.author?.profile?.pfpUrl || null}
                     onLikeSave={handleLikeSave}
                   />
                 ))}
