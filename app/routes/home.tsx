@@ -42,6 +42,14 @@ export async function loader({ request }: Route.LoaderArgs) {
   ];
 
   if (searchQuery) {
+    // Use raw query to perform fuzzy search (ILIKE) on the ingredients array
+    // We convert the array to a string to allow partial matching (e.g. "l" finds "Lavender")
+    const ingredientMatches = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT id FROM "Recipe"
+      WHERE array_to_string(ingredients, ' ') ILIKE ${`%${searchQuery}%`}
+    `;
+    const ingredientIds = ingredientMatches.map(r => r.id);
+
     const where: any = {
       OR: [
         { name: { contains: searchQuery, mode: "insensitive" } },
@@ -49,7 +57,7 @@ export async function loader({ request }: Route.LoaderArgs) {
         { brewMethod: { contains: searchQuery, mode: "insensitive" } },
         { difficulty: { contains: searchQuery, mode: "insensitive" } },
         { author: { name: { contains: searchQuery, mode: "insensitive" } } },
-        { ingredients: { has: searchQuery } },
+        { id: { in: ingredientIds } },
       ],
     };
 
