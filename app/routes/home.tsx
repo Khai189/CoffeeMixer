@@ -190,7 +190,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const handleLikeSave = useCallback(() => {
     // If searching, refresh results. If not, the main loader revalidates automatically.
     // We use the fetcher to reload the current view without a hard page reload.
-    fetcher.load(`?search=${encodeURIComponent(search)}`);
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    fetcher.load(`?${params.toString()}`);
   }, [search, fetcher]);
 
   // Debounced instant search
@@ -202,9 +204,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     }
 
     const timeout = setTimeout(() => {
-      // Use relative URL `?search=` instead of hardcoded `/home`.
-      // This ensures it works whether served at / or /home.
-      fetcher.load(`?search=${encodeURIComponent(search)}`);
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      // Use relative URL `?` instead of hardcoded `/home`.
+      fetcher.load(`?${params.toString()}`);
     }, 250);
     return () => clearTimeout(timeout);
   }, [search, searchQuery, fetcher]);

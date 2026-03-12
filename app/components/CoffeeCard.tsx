@@ -63,7 +63,7 @@ export default function CoffeeCard({
     // Call onLikeSave when like/save completes
     const prevLikeState = useRef(likeFetcher.state);
     useEffect(() => {
-        if (onLikeSave && likeFetcher.state === "idle" && prevLikeState.current !== "idle" && likeFetcher.data) {
+        if (onLikeSave && likeFetcher.state === "idle" && prevLikeState.current === "submitting" && likeFetcher.data) {
             onLikeSave();
         }
         prevLikeState.current = likeFetcher.state;
@@ -71,7 +71,7 @@ export default function CoffeeCard({
 
     const prevSaveState = useRef(saveFetcher.state);
     useEffect(() => {
-        if (onLikeSave && saveFetcher.state === "idle" && prevSaveState.current !== "idle" && saveFetcher.data) {
+        if (onLikeSave && saveFetcher.state === "idle" && prevSaveState.current === "submitting" && saveFetcher.data) {
             onLikeSave();
         }
         prevSaveState.current = saveFetcher.state;

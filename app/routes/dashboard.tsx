@@ -107,16 +107,14 @@ export async function loader({ request }: Route.LoaderArgs) {
 export default function Dashboard({ loaderData }: Route.ComponentProps) {
     const { userName, savedRecipes, myRecipes, userLikes, userSaves, stats } = loaderData;
     const fetcher = useFetcher();
-    const [reloadKey, setReloadKey] = useState(0);
 
     // Callback to reload dashboard
     const handleLikeSave = useCallback(() => {
         fetcher.load("/dashboard");
-        setReloadKey((k) => k + 1);
     }, [fetcher]);
 
     return (
-        <main className="max-w-5xl mx-auto px-4 py-6 sm:py-8 space-y-8 sm:space-y-10" key={reloadKey}>
+        <main className="max-w-5xl mx-auto px-4 py-6 sm:py-8 space-y-8 sm:space-y-10">
             {/* Greeting + Create CTA */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                 <div>
