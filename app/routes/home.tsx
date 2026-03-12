@@ -20,14 +20,17 @@ export function meta({}: Route.MetaArgs) {
 export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const searchQuery = url.searchParams.get("search")?.trim() || "";
+  const page = parseInt(url.searchParams.get("page") || "1", 10);
+  const limit = 6;
+  const skip = (page - 1) * limit;
   const userId = await getUserId(request);
 
   // Get personalized recommendations or trending recipes
   let recommendations = [];
   if (userId) {
-    recommendations = await getRecommendationsForUser(userId, 6);
+    recommendations = await getRecommendationsForUser(userId, limit, skip);
   } else {
-    recommendations = await getTrendingRecipes(6);
+    recommendations = await getTrendingRecipes(limit, skip);
   }
 
   // Only fetch recipes if there's a search query
@@ -59,7 +62,8 @@ export async function loader({ request }: Route.LoaderArgs) {
         _count: { select: { likes: true, savedBy: true } },
       },
       orderBy: { createdAt: "desc" },
-      take: 50, // Limit results
+      take: limit,
+      skip: skip,
     });
     allRecipeIds.push(...recipes.map(r => r.id));
   }
@@ -140,6 +144,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     recipes: patchedRecipes,
     userLikes,
     userSaves,
+    page,
     searchQuery,
     userId,
   };
@@ -183,8 +188,19 @@ export async function action({ request }: Route.ActionArgs) {
 export default function Home({ loaderData }: Route.ComponentProps) {
   const { recipes, userLikes, userSaves, userId, recommendations, searchQuery } = loaderData;
   const [search, setSearch] = useState(searchQuery || "");
+  
+  // State to hold the displayed list of items to support "Load More" (append) pattern
+  const [displayRecommendations, setDisplayRecommendations] = useState(recommendations);
+  const [displayRecipes, setDisplayRecipes] = useState(recipes);
+  
+  // Pagination state
+  const [recPage, setRecPage] = useState(1);
+  const [searchPage, setSearchPage] = useState(1);
+  const PAGE_SIZE = 6;
+
   const fetcher = useFetcher();
   const isFirstRun = useRef(true);
+  const loadMoreFetcher = useFetcher();
 
   // Callback to reload home feed after like/save
   const handleLikeSave = useCallback(() => {
@@ -192,8 +208,36 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     // We use the fetcher to reload the current view without a hard page reload.
     const params = new URLSearchParams();
     if (search) params.set("search", search);
+    // We don't want to reset pagination on like/save, but strictly speaking revalidating
+    // might be tricky with client-side appended lists. 
+    // For simplicity, we just let the optimistic UI handle the immediate feedback
+    // and revalidate mostly to keep sync.
     fetcher.load(`?${params.toString()}`);
   }, [search, fetcher]);
+
+  // Handle Load More
+  const handleLoadMore = () => {
+    const params = new URLSearchParams();
+    const nextPage = search ? searchPage + 1 : recPage + 1;
+    
+    if (search) params.set("search", search);
+    params.set("page", nextPage.toString());
+    
+    loadMoreFetcher.load(`?${params.toString()}`);
+  };
+
+  // Append data when loadMoreFetcher completes
+  useEffect(() => {
+    if (loadMoreFetcher.data) {
+      if (search) {
+        setDisplayRecipes(prev => [...prev, ...loadMoreFetcher.data.recipes]);
+        setSearchPage(prev => prev + 1);
+      } else {
+        setDisplayRecommendations(prev => [...prev, ...loadMoreFetcher.data.recommendations]);
+        setRecPage(prev => prev + 1);
+      }
+    }
+  }, [loadMoreFetcher.data, search]);
 
   // Debounced instant search
   useEffect(() => {
@@ -213,7 +257,18 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   }, [search, searchQuery, fetcher]);
 
   // Use fetcher data if available, else loaderData
-  const data = fetcher.data || loaderData;
+  // Note: We use state for lists to support appending, so we sync loader/fetcher data to state
+  useEffect(() => {
+    const source = fetcher.data || loaderData;
+    // Only reset lists if we are essentially resetting the view (new search or initial load)
+    // or if the fetcher just returned a fresh page 1 search result
+    setDisplayRecipes(source.recipes);
+    setDisplayRecommendations(source.recommendations);
+    if (fetcher.data) setSearchPage(1); // Reset search page on new search
+  }, [fetcher.data, loaderData]);
+
+  const activeList = search ? displayRecipes : displayRecommendations;
+  const showLoadMore = activeList.length > 0 && activeList.length % PAGE_SIZE === 0 && (loadMoreFetcher.state === "idle");
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-6 sm:py-8">
@@ -268,7 +323,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </div>
         </Form>
       </section>      {/* For You / Trending Section - Hide when searching */}
-      {!search && data.recommendations.length > 0 && (
+      {!search && displayRecommendations.length > 0 && (
         <section className="mb-8 sm:mb-12" aria-labelledby="recommendations-heading">
           <div className="flex items-center justify-between mb-4">
             <h2 id="recommendations-heading" className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
@@ -289,7 +344,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               : "Popular recipes loved by the CoffeeMixer community"}
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {(data.recommendations as any[]).map((recipe) => (
+            {(displayRecommendations as any[]).map((recipe) => (
               <CoffeeCard
                 key={recipe.id}
                 id={recipe.id}
@@ -301,8 +356,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 author={recipe.author?.name || "CoffeeMixer"}
                 authorId={recipe.author?.id}
                 likes={recipe._count.likes}
-                liked={data.userLikes.includes(recipe.id)}
-                saved={data.userSaves.includes(recipe.id)}
+                liked={userLikes.includes(recipe.id)}
+                saved={userSaves.includes(recipe.id)}
                 imageUrl={recipe.imageUrl}
                 authorPfpUrl={recipe.author?.authorPfpUrl || null}
                 onLikeSave={handleLikeSave}
@@ -324,7 +379,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 Searching for recipes...
               </p>
             </div>
-          ) : data.recipes.length === 0 ? (
+          ) : displayRecipes.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-5xl mb-4" aria-hidden="true">🔍</p>
               <p className="text-gray-500 dark:text-gray-400 text-lg mb-2">
@@ -341,17 +396,17 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               </a>
             </div>
           ) : (
-            <section aria-label={`${data.recipes.length} search results`}>
+            <section aria-label="Search results">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                   Search Results for "{search}"
                 </h2>
                 <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {data.recipes.length} {data.recipes.length === 1 ? "result" : "results"}
+                  Showing {displayRecipes.length} results
                 </span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {(data.recipes as any[]).map((recipe) => (
+                {(displayRecipes as any[]).map((recipe) => (
                   <CoffeeCard
                     key={recipe.id}
                     id={recipe.id}
@@ -363,8 +418,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                     author={recipe.author?.name || "CoffeeMixer"}
                     authorId={recipe.author?.id}
                     likes={recipe._count.likes}
-                    liked={data.userLikes.includes(recipe.id)}
-                    saved={data.userSaves.includes(recipe.id)}
+                    liked={userLikes.includes(recipe.id)}
+                    saved={userSaves.includes(recipe.id)}
                     imageUrl={recipe.imageUrl}
                     authorPfpUrl={recipe.author?.authorPfpUrl || null}
                     onLikeSave={handleLikeSave}
@@ -374,6 +429,26 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             </section>
           )}
         </>
+      )}
+
+      {/* Load More Button */}
+      {showLoadMore && (
+        <div className="mt-8 text-center">
+          <button
+            onClick={handleLoadMore}
+            disabled={loadMoreFetcher.state !== "idle"}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-medium hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loadMoreFetcher.state !== "idle" ? (
+              <>
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                Loading...
+              </>
+            ) : (
+              "Load More"
+            )}
+          </button>
+        </div>
       )}
     </main>
   );

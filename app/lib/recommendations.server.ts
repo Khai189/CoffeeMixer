@@ -135,7 +135,7 @@ function calculateContentScore(
     return score;
 }
 
-export async function getRecommendationsForUser(userId: string, limit: number = 6) {
+export async function getRecommendationsForUser(userId: string, limit: number = 6, skip: number = 0) {
     // 1. Get user profile
     const userProfile = await prisma.profile.findUnique({
         where: { userId },
@@ -158,6 +158,7 @@ export async function getRecommendationsForUser(userId: string, limit: number = 
                 { createdAt: "desc" },
             ],
             take: limit,
+            skip: skip,
         });
         return recipes.map(r => ({ ...r, score: 0 }));
     }
@@ -226,13 +227,13 @@ export async function getRecommendationsForUser(userId: string, limit: number = 
     // 7. Sort by score and return top N
     return scoredRecipes
         .sort((a, b) => b.score - a.score)
-        .slice(0, limit);
+        .slice(skip, skip + limit);
 }
 
 /**
  * Get trending recipes (fallback for non-logged-in users)
  */
-export async function getTrendingRecipes(limit: number = 10) {
+export async function getTrendingRecipes(limit: number = 10, skip: number = 0) {
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     
     return prisma.recipe.findMany({
@@ -246,5 +247,6 @@ export async function getTrendingRecipes(limit: number = 10) {
             { createdAt: "desc" },
         ],
         take: limit,
+        skip: skip,
     });
 }
