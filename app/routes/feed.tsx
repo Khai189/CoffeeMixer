@@ -387,7 +387,7 @@ function PostCard({
                                 onError={e => { e.currentTarget.src = "/default-pfp.png"; }}
                             />
                         ) : (
-                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-200 to-amber-400 dark:from-amber-700 dark:to-amber-900 flex items-center justify-center text-sm font-bold text-white shadow-sm">
+                            <div className="w-9 h-9 rounded-full bg-linear-to-br from-amber-200 to-amber-400 dark:from-amber-700 dark:to-amber-900 flex items-center justify-center text-sm font-bold text-white shadow-sm">
                                 {post.author.name.charAt(0).toUpperCase()}
                             </div>
                         )}

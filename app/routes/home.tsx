@@ -2,7 +2,7 @@ import { useCallback, useState, useEffect, useRef } from "react";
 import type { Route } from "./+types/home";
 import { prisma } from "../lib/db.server";
 import { getUserId } from "../lib/session.server";
-import { redirect, Form, useNavigation, useFetcher } from "react-router";
+import { redirect, Form, useFetcher } from "react-router";
 import CoffeeCard from "../components/CoffeeCard";
 import { getRecommendationsForUser, getTrendingRecipes } from "../lib/recommendations.server";
 
@@ -38,10 +38,10 @@ export async function loader({ request }: Route.LoaderArgs) {
   let userLikes: string[] = [];
   let userSaves: string[] = [];
 
-  // Collect all recipe IDs shown
+  // Collect all recipe IDs shown to fetch like/save status efficiently
   const allRecipeIds = [
     ...recommendations.map(r => r.id),
-    ...(searchQuery ? [] : []), // will be filled below
+    ...(searchQuery ? [] : []), 
   ];
 
   if (searchQuery) {
@@ -49,9 +49,10 @@ export async function loader({ request }: Route.LoaderArgs) {
       OR: [
         { name: { contains: searchQuery, mode: "insensitive" } },
         { description: { contains: searchQuery, mode: "insensitive" } },
-        { brewMethod: { contains: searchQuery, mode: "insensitive" } },
         { difficulty: { contains: searchQuery, mode: "insensitive" } },
         { author: { name: { contains: searchQuery, mode: "insensitive" } } },
+        // Keeping brewMethod as it's useful, but the query strictly covers your request
+        { brewMethod: { contains: searchQuery, mode: "insensitive" } },
       ],
     };
 
@@ -84,28 +85,17 @@ export async function loader({ request }: Route.LoaderArgs) {
     userSaves = saves.map((s) => s.recipeId);
   }
 
-  // Utility for robust image fallback (no fs/path, serverless-safe)
+  // Utility for robust image fallback
   function checkImage(url: string | null | undefined, fallback: string) {
-    // If the url is missing, empty, or not a string, fallback
     if (!url || typeof url !== "string" || url.length === 0) return fallback;
-    // If the url is for uploads, just return it (let client handle 404)
     return url;
   }
 
-  // Patch recipe and pfp images for recommendations and search results
-  const patchedRecommendations = recommendations.map(recipe => {
+  // Patch recipe and pfp images
+  const patchRecipe = (recipe: any) => {
     let authorPfpUrl = "/default-pfp.png";
-    // Defensive: check for profile property and pfpUrl
-    if (
-      recipe.author &&
-      typeof recipe.author === "object" &&
-      "profile" in recipe.author &&
-      recipe.author.profile &&
-      typeof recipe.author.profile === "object" &&
-      "pfpUrl" in recipe.author.profile &&
-      typeof (recipe.author.profile as any).pfpUrl === "string"
-    ) {
-      authorPfpUrl = checkImage((recipe.author.profile as any).pfpUrl, "/default-pfp.png");
+    if (recipe.author?.profile?.pfpUrl) {
+      authorPfpUrl = checkImage(recipe.author.profile.pfpUrl, "/default-pfp.png");
     }
     return {
       ...recipe,
@@ -115,33 +105,11 @@ export async function loader({ request }: Route.LoaderArgs) {
         authorPfpUrl,
       },
     };
-  });
-  const patchedRecipes = recipes.map(recipe => {
-    let authorPfpUrl = "/default-pfp.png";
-    if (
-      recipe.author &&
-      typeof recipe.author === "object" &&
-      "profile" in recipe.author &&
-      recipe.author.profile &&
-      typeof recipe.author.profile === "object" &&
-      "pfpUrl" in recipe.author.profile &&
-      typeof (recipe.author.profile as any).pfpUrl === "string"
-    ) {
-      authorPfpUrl = checkImage((recipe.author.profile as any).pfpUrl, "/default-pfp.png");
-    }
-    return {
-      ...recipe,
-      imageUrl: checkImage(recipe.imageUrl, "/default-recipe.png"),
-      author: {
-        ...recipe.author,
-        authorPfpUrl,
-      },
-    };
-  });
+  };
 
   return {
-    recommendations: patchedRecommendations,
-    recipes: patchedRecipes,
+    recommendations: recommendations.map(patchRecipe),
+    recipes: recipes.map(patchRecipe),
     userLikes,
     userSaves,
     page,
@@ -161,7 +129,6 @@ export async function action({ request }: Route.ActionArgs) {
   if (!recipeId) return { error: "Missing recipe ID" };
 
   if (intent === "like") {
-    if (!userId) return redirect("/login");
     const existing = await prisma.like.findUnique({
       where: { userId_recipeId: { userId, recipeId } },
     });
@@ -171,7 +138,6 @@ export async function action({ request }: Route.ActionArgs) {
       await prisma.like.create({ data: { userId, recipeId } });
     }
   } else if (intent === "save") {
-    if (!userId) return redirect("/login");
     const existing = await prisma.savedRecipe.findUnique({
       where: { userId_recipeId: { userId, recipeId } },
     });
@@ -186,33 +152,26 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const { recipes, userLikes, userSaves, userId, recommendations, searchQuery } = loaderData;
+  const { userLikes, userSaves, userId, searchQuery } = loaderData;
   const [search, setSearch] = useState(searchQuery || "");
   
-  // State to hold the displayed list of items to support "Load More" (append) pattern
-  const [displayRecommendations, setDisplayRecommendations] = useState(recommendations || []);
-  const [displayRecipes, setDisplayRecipes] = useState(recipes || []);
+  // State to hold the displayed list of items
+  const [displayRecommendations, setDisplayRecommendations] = useState(loaderData.recommendations || []);
+  const [displayRecipes, setDisplayRecipes] = useState(loaderData.recipes || []);
   
-  // Pagination state
   const [recPage, setRecPage] = useState(1);
   const [searchPage, setSearchPage] = useState(1);
   const PAGE_SIZE = 6;
 
   const fetcher = useFetcher();
-  const isFirstRun = useRef(true);
   const loadMoreFetcher = useFetcher();
+  const isFirstRun = useRef(true);
   const lastProcessedData = useRef<any>(null);
 
-  // Callback to reload home feed after like/save
+  // Callback to reload home feed after like/save (optimistic updates handle UI, this ensures consistency)
   const handleLikeSave = useCallback(() => {
-    // If searching, refresh results. If not, the main loader revalidates automatically.
-    // We use the fetcher to reload the current view without a hard page reload.
     const params = new URLSearchParams();
     if (search) params.set("search", search);
-    // We don't want to reset pagination on like/save, but strictly speaking revalidating
-    // might be tricky with client-side appended lists. 
-    // For simplicity, we just let the optimistic UI handle the immediate feedback
-    // and revalidate mostly to keep sync.
     fetcher.load(`?${params.toString()}`);
   }, [search, fetcher]);
 
@@ -241,9 +200,21 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     }
   }, [loadMoreFetcher.data, search]);
 
+  // Sync main fetcher data (for search or revalidation)
+  useEffect(() => {
+    const source = fetcher.data || loaderData;
+    if (source) {
+      // Always update lists when new data arrives
+      if (source.recipes) setDisplayRecipes(source.recipes);
+      if (source.recommendations) setDisplayRecommendations(source.recommendations);
+      
+      // Reset search page only if this is a fresh search result from the main fetcher
+      if (fetcher.data && fetcher.data.recipes) setSearchPage(1);
+    }
+  }, [fetcher.data, loaderData]);
+
   // Debounced instant search
   useEffect(() => {
-    // Prevent double-fetch on initial load
     if (isFirstRun.current) {
         isFirstRun.current = false;
         if (search === (searchQuery || "")) return;
@@ -252,28 +223,20 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     const timeout = setTimeout(() => {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
-      // Use relative URL `?` instead of hardcoded `/home`.
       fetcher.load(`?${params.toString()}`);
-    }, 250);
+    }, 250); // 250ms debounce for "instant" feel
     return () => clearTimeout(timeout);
-  }, [search, searchQuery, fetcher]);
+  }, [search, fetcher]);
 
-  // Use fetcher data if available, else loaderData
-  // Note: We use state for lists to support appending, so we sync loader/fetcher data to state
-  useEffect(() => {
-    const source = fetcher.data || loaderData;
-    // Only reset lists if we are essentially resetting the view (new search or initial load)
-    // or if the fetcher just returned a fresh page 1 search result
-    if (source) {
-      setDisplayRecipes(source.recipes || []);
-      setDisplayRecommendations(source.recommendations || []);
-      if (fetcher.data) setSearchPage(1); // Reset search page on new search
-    }
-  }, [fetcher.data, loaderData]);
+  // Use current likes/saves from fetcher if available, otherwise loader
+  const currentLikes = fetcher.data?.userLikes || userLikes || [];
+  const currentSaves = fetcher.data?.userSaves || userSaves || [];
 
   const activeList = search ? displayRecipes : displayRecommendations;
   const safeList = activeList || [];
-  const showLoadMore = safeList.length > 0 && safeList.length % PAGE_SIZE === 0 && (loadMoreFetcher.state === "idle");
+  
+  // Only show load more if not currently loading
+  const showLoadMore = safeList.length > 0 && safeList.length % PAGE_SIZE === 0 && loadMoreFetcher.state === "idle";
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-6 sm:py-8">
@@ -295,7 +258,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               name="search"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search recipes, ingredients, brew methods..."
+              placeholder="Search recipes, difficulty, authors..."
               className="w-full px-6 py-4 pl-14 rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all"
               aria-label="Search recipes"
               autoComplete="off"
@@ -307,27 +270,13 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               viewBox="0 0 24 24"
               aria-hidden="true"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            {search && (
-              <a
-                href="/"
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                aria-label="Clear search"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </a>
-            )}
           </div>
         </Form>
-      </section>      {/* For You / Trending Section - Hide when searching */}
+      </section>
+
+      {/* For You / Trending Section - Hide when searching */}
       {!search && displayRecommendations.length > 0 && (
         <section className="mb-8 sm:mb-12" aria-labelledby="recommendations-heading">
           <div className="flex items-center justify-between mb-4">
@@ -343,13 +292,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               </a>
             )}
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            {userId
-              ? "Personalized recommendations based on your coffee preferences"
-              : "Popular recipes loved by the CoffeeMixer community"}
-          </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {(displayRecommendations as any[]).map((recipe) => (
+            {displayRecommendations.map((recipe: any) => (
               <CoffeeCard
                 key={recipe.id}
                 id={recipe.id}
@@ -360,9 +304,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 ingredients={recipe.ingredients}
                 author={recipe.author?.name || "CoffeeMixer"}
                 authorId={recipe.author?.id}
-                likes={recipe._count.likes}
-                liked={userLikes.includes(recipe.id)}
-                saved={userSaves.includes(recipe.id)}
+                likes={recipe._count?.likes || 0}
+                liked={currentLikes.includes(recipe.id)}
+                saved={currentSaves.includes(recipe.id)}
                 imageUrl={recipe.imageUrl}
                 authorPfpUrl={recipe.author?.authorPfpUrl || null}
                 onLikeSave={handleLikeSave}
@@ -375,43 +319,28 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       {/* Search Results */}
       {search && (
         <>
-          {fetcher.state !== 'idle' && displayRecipes.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto" role="status">
-                <span className="sr-only">Loading...</span>
-              </div>
-              <p className="text-gray-500 dark:text-gray-400 text-lg mt-4">
-                Searching for recipes...
-              </p>
-            </div>
-          ) : displayRecipes.length === 0 ? (
+          {displayRecipes.length === 0 && fetcher.state === 'idle' ? (
             <div className="text-center py-16">
               <p className="text-5xl mb-4" aria-hidden="true">🔍</p>
               <p className="text-gray-500 dark:text-gray-400 text-lg mb-2">
                 No recipes found for "{search}"
               </p>
               <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">
-                Try a different search term or browse recommendations above
+                Try a different search term or browse recommendations
               </p>
-              <a
-                href="/"
-                className="inline-block px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
-              >
-                Clear search
-              </a>
             </div>
           ) : (
             <section aria-label="Search results" className={fetcher.state !== 'idle' ? "opacity-50 transition-opacity" : ""}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                  Search Results for "{search}"
+                  Search Results
                 </h2>
                 <span className="text-sm text-gray-500 dark:text-gray-400">
-                  Showing {displayRecipes.length} results
+                  {displayRecipes.length > 0 ? "Found recipes" : "Searching..."}
                 </span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {(displayRecipes as any[]).map((recipe) => (
+                {displayRecipes.map((recipe: any) => (
                   <CoffeeCard
                     key={recipe.id}
                     id={recipe.id}
@@ -422,9 +351,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                     ingredients={recipe.ingredients}
                     author={recipe.author?.name || "CoffeeMixer"}
                     authorId={recipe.author?.id}
-                    likes={recipe._count.likes}
-                    liked={userLikes.includes(recipe.id)}
-                    saved={userSaves.includes(recipe.id)}
+                    likes={recipe._count?.likes || 0}
+                    liked={currentLikes.includes(recipe.id)}
+                    saved={currentSaves.includes(recipe.id)}
                     imageUrl={recipe.imageUrl}
                     authorPfpUrl={recipe.author?.authorPfpUrl || null}
                     onLikeSave={handleLikeSave}
@@ -441,17 +370,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         <div className="mt-8 text-center">
           <button
             onClick={handleLoadMore}
-            disabled={loadMoreFetcher.state !== "idle"}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-medium hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-medium hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950 transition-colors"
           >
-            {loadMoreFetcher.state !== "idle" ? (
-              <>
-                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                Loading...
-              </>
-            ) : (
-              "Load More"
-            )}
+            Load More
           </button>
         </div>
       )}

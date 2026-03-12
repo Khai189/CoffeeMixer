@@ -84,7 +84,7 @@ export default function Navbar({ user }: NavbarProps) {
                         <>
                             <Link
                                 to="/profile"
-                                className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-200 to-amber-400 dark:from-amber-700 dark:to-amber-900 flex items-center justify-center text-sm font-bold text-white shadow-sm hover:ring-2 hover:ring-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950 transition-all"
+                                className="w-9 h-9 rounded-full bg-linear-to-br from-amber-200 to-amber-400 dark:from-amber-700 dark:to-amber-900 flex items-center justify-center text-sm font-bold text-white shadow-sm hover:ring-2 hover:ring-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950 transition-all"
                                 aria-label={`Profile for ${user.name}`}
                             >
                                 {user.profile?.pfpUrl ? (
