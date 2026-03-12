@@ -82,16 +82,20 @@ export async function loader({ request }: Route.LoaderArgs) {
     userSaves = saves.map((s) => s.recipeId);
   }
 
-  // Utility for checking file existence (ESM compatible, robust for serverless)
+  // Utility for checking file existence (ESM compatible, bulletproof for serverless)
   function checkImage(url: string | null | undefined, fallback: string) {
     try {
+      // If fs or path are not available, always fallback
+      if (typeof existsSync !== "function" || typeof join !== "function") {
+        return fallback;
+      }
       if (typeof url === "string" && url.startsWith("/uploads/")) {
         const imagePath = join(process.cwd(), "public", url);
         if (!existsSync(imagePath)) return fallback;
       }
       return typeof url === "string" && url.length > 0 ? url : fallback;
     } catch (err) {
-      // In serverless (Railway), fs may throw; always fallback
+      // In serverless (Railway), fs may throw or not exist; always fallback
       return fallback;
     }
   }
