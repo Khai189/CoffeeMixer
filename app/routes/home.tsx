@@ -47,8 +47,8 @@ export async function loader({ request }: Route.LoaderArgs) {
     let ingredientIds: string[] = [];
     try {
       const ingredientMatches = await prisma.$queryRaw<{ id: string }[]>`
-        SELECT id FROM "Recipe"
-        WHERE array_to_string(ingredients, ' ') ILIKE ${`%${searchQuery}%`}
+        SELECT "id" FROM "Recipe"
+        WHERE array_to_string("ingredients", ' ') ILIKE ${`%${searchQuery}%`}
       `;
       ingredientIds = ingredientMatches.map(r => r.id);
     } catch (e) {
@@ -64,6 +64,7 @@ export async function loader({ request }: Route.LoaderArgs) {
         { difficulty: { contains: searchQuery, mode: "insensitive" } },
         { author: { name: { contains: searchQuery, mode: "insensitive" } } },
         { id: { in: ingredientIds } },
+        { ingredients: { has: searchQuery } },
       ],
     };
 
@@ -250,7 +251,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         <Form method="get" className="max-w-2xl mx-auto" onSubmit={e => e.preventDefault()}>
           <div className="relative">
             <input
-              type="search"
+              type="text"
               name="search"
               value={search}
               onChange={e => setSearch(e.target.value)}
