@@ -44,11 +44,17 @@ export async function loader({ request }: Route.LoaderArgs) {
   if (searchQuery) {
     // Use raw query to perform fuzzy search (ILIKE) on the ingredients array
     // We convert the array to a string to allow partial matching (e.g. "l" finds "Lavender")
-    const ingredientMatches = await prisma.$queryRaw<{ id: string }[]>`
-      SELECT "id" FROM "Recipe"
-      WHERE array_to_string("ingredients", ' ') ILIKE ${`%${searchQuery}%`}
-    `;
-    const ingredientIds = ingredientMatches.map(r => r.id);
+    let ingredientIds: string[] = [];
+    try {
+      const ingredientMatches = await prisma.$queryRaw<{ id: string }[]>`
+        SELECT "id" FROM "Recipe"
+        WHERE array_to_string("ingredients"::text[], ' ') ILIKE ${`%${searchQuery}%`}
+      `;
+      ingredientIds = ingredientMatches.map(r => r.id);
+      console.log("Found ingredient matches via raw SQL:", ingredientIds);
+    } catch (error) {
+      console.error("RAW SQL ERROR in search:", error);
+    }
 
     const where: any = {
       OR: [
@@ -61,6 +67,8 @@ export async function loader({ request }: Route.LoaderArgs) {
         { ingredients: { has: searchQuery } },
       ],
     };
+
+    console.log("Executing Prisma search query with where:", JSON.stringify(where, null, 2));
 
     recipes = await prisma.recipe.findMany({
       where,
@@ -202,7 +210,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     // We use the fetcher to reload the current view without a hard page reload.
     const params = new URLSearchParams();
     if (search) params.set("search", search);
-    fetcher.load(`?${params.toString()}`);
+    const queryStr = params.toString();
+    fetcher.load(`/?index${queryStr ? `&${queryStr}` : ""}`);
   }, [search, fetcher]);
 
   // Debounced instant search
@@ -216,8 +225,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     const timeout = setTimeout(() => {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
-      // Use relative URL `?` instead of hardcoded `/home`.
-      fetcher.load(`?${params.toString()}`);
+      const queryStr = params.toString();
+      fetcher.load(`/?index${queryStr ? `&${queryStr}` : ""}`);
     }, 250);
     return () => clearTimeout(timeout);
   }, [search]);
