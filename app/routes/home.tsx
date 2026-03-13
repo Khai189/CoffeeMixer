@@ -51,7 +51,6 @@ export async function loader({ request }: Route.LoaderArgs) {
         WHERE array_to_string("ingredients"::text[], ' ') ILIKE ${`%${searchQuery}%`}
       `;
       ingredientIds = ingredientMatches.map(r => r.id);
-      console.log("Found ingredient matches via raw SQL:", ingredientIds);
     } catch (error) {
       console.error("RAW SQL ERROR in search:", error);
     }
@@ -67,8 +66,6 @@ export async function loader({ request }: Route.LoaderArgs) {
         { ingredients: { has: searchQuery } },
       ],
     };
-
-    console.log("Executing Prisma search query with where:", JSON.stringify(where, null, 2));
 
     recipes = await prisma.recipe.findMany({
       where,
