@@ -44,17 +44,11 @@ export async function loader({ request }: Route.LoaderArgs) {
   if (searchQuery) {
     // Use raw query to perform fuzzy search (ILIKE) on the ingredients array
     // We convert the array to a string to allow partial matching (e.g. "l" finds "Lavender")
-    let ingredientIds: string[] = [];
-    try {
-      const ingredientMatches = await prisma.$queryRaw<{ id: string }[]>`
-        SELECT "id" FROM "Recipe"
-        WHERE array_to_string("ingredients", ' ') ILIKE ${`%${searchQuery}%`}
-      `;
-      ingredientIds = ingredientMatches.map(r => r.id);
-    } catch (e) {
-      console.warn("Ingredient search failed (likely table name mismatch), skipping ingredient filter.", e);
-      // Fallback: continue search without partial ingredient matches
-    }
+    const ingredientMatches = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT "id" FROM "Recipe"
+      WHERE array_to_string("ingredients", ' ') ILIKE ${`%${searchQuery}%`}
+    `;
+    const ingredientIds = ingredientMatches.map(r => r.id);
 
     const where: any = {
       OR: [
