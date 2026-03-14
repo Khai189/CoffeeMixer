@@ -1,7 +1,7 @@
 import { createCookieSessionStorage, redirect } from "react-router";
 
 // Session storage using a secure HTTP-only cookie
-const sessionStorage = createCookieSessionStorage({
+export const sessionStorage = createCookieSessionStorage({
     cookie: {
         name: "__coffeemixer_session",
         httpOnly: true,

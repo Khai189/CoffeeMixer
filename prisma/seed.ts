@@ -123,22 +123,67 @@ const recipes = [
     instructions:
       "1. Grind beans to a medium consistency.\n2. Place filter in dripper, rinse with hot water.\n3. Add grounds and bloom with a small pour for 30 seconds.\n4. Continue pouring in slow circles for 3–4 minutes.\n5. Add maple syrup to the brewed coffee and stir.\n6. Top with a splash of pecan milk.",
   },
+  {
+    name: "Nitro Cold Brew",
+    description:
+      "Ultra-smooth, nitrogen-infused cold brew. Rich, velvety, and sweet without any dairy or sugar.",
+    brewMethod: "Cold Brew",
+    difficulty: "medium",
+    ingredients: ["Coarse Ground Coffee", "Filtered Water", "Nitrogen Cartridge"],
+    instructions:
+      "1. Brew cold brew concentrate by steeping coarse grounds in water for 24 hours.\n2. Strain completely through a fine mesh.\n3. Transfer to a whipped cream dispenser.\n4. Charge with a nitrogen cartridge and shake vigorously.\n5. Dispense into a chilled glass and admire the cascade.",
+  },
+  {
+    name: "Classic Affogato",
+    description:
+      "A classic Italian dessert coffee. Hot, bold espresso poured over freezing cold vanilla bean ice cream.",
+    brewMethod: "Espresso",
+    difficulty: "easy",
+    ingredients: ["Espresso", "Vanilla Bean Ice Cream"],
+    instructions:
+      "1. Scoop a generous amount of vanilla ice cream into a small bowl or glass.\n2. Pull a fresh double shot of espresso.\n3. Immediately pour the hot espresso over the ice cream.\n4. Serve right away with a spoon.",
+  },
+  {
+    name: "Iced Shaken Espresso",
+    description:
+      "Robust espresso shaken with ice and lightly sweetened, topped with a refreshing splash of milk.",
+    brewMethod: "Espresso",
+    difficulty: "easy",
+    ingredients: ["Espresso", "Classic Syrup", "Ice", "Whole Milk"],
+    instructions:
+      "1. Pull a double espresso shot.\n2. Add espresso, ice, and syrup to a cocktail shaker.\n3. Shake vigorously for 15 seconds until thoroughly chilled and frothy.\n4. Strain into a glass filled with fresh ice.\n5. Top with a splash of milk.",
+  },
+  {
+    name: "Cardamom Pour Over",
+    description:
+      "A delicate and fragrant pour over infused with the warm spice of freshly ground cardamom.",
+    brewMethod: "Pour Over",
+    difficulty: "medium",
+    ingredients: ["Light Roast Beans", "Cardamom Seeds", "Hot Water"],
+    instructions:
+      "1. Grind light roast coffee beans with a pinch of cardamom seeds to a medium-fine consistency.\n2. Rinse the paper filter with hot water.\n3. Add the ground mixture and pour 50g of water to bloom for 30 seconds.\n4. Slowly pour the remaining water in concentric circles.\n5. Let it finish dripping and serve.",
+  },
+  {
+    name: "Dalgona Whipped Coffee",
+    description:
+      "Thick, velvety whipped coffee foam sitting atop chilled milk. A visually stunning and sweet treat.",
+    brewMethod: "Espresso",
+    difficulty: "medium",
+    ingredients: ["Instant Coffee", "Granulated Sugar", "Hot Water", "Cold Milk", "Ice"],
+    instructions:
+      "1. Combine equal parts instant coffee, sugar, and hot water in a bowl.\n2. Whisk vigorously for 3-5 minutes until thick, golden peaks form.\n3. Fill a glass with ice and cold milk.\n4. Spoon the whipped coffee mixture on top of the milk.\n5. Stir well before drinking.",
+  }
 ];
 
 async function main() {
-  console.log("🌱 Seeding database...");
-
-  // Clear existing data
-  await prisma.like.deleteMany();
-  await prisma.savedRecipe.deleteMany();
-  await prisma.recipe.deleteMany();
+  console.log("Seeding database...");
 
   // Create recipes
   for (const recipe of recipes) {
     await prisma.recipe.create({ data: recipe });
   }
 
-  console.log(`✅ Seeded ${recipes.length} recipes`);
+  console.log(`Seeded ${recipes.length} recipes successfully.`);
 }
 
 main()

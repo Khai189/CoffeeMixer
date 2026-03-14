@@ -11,6 +11,7 @@ import type { Route } from "./+types/root";
 import Navbar from "./components/Navbar";
 import { getUserId } from "./lib/session.server";
 import { prisma } from "./lib/db.server";
+import ChatBarista from "./components/ChatBarista";
 import "./app.css";
 
 export const links: Route.LinksFunction = () => [
@@ -105,6 +106,7 @@ export default function App({ loaderData }: Route.ComponentProps) {
       <div id="main-content" className="pt-16">
         <Outlet />
       </div>
+      <ChatBarista />
     </>
   );
 }

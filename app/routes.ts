@@ -13,4 +13,5 @@ export default [
   route("logout", "routes/logout.tsx"),
   route("user/:userId", "routes/user.tsx"),
   route("api/upload", "routes/api/upload.ts"),
+  route("api/chat", "routes/api.chat.ts"),
 ] satisfies RouteConfig;
