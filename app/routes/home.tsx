@@ -2,7 +2,7 @@ import { useCallback, useState, useEffect, useRef } from "react";
 import type { Route } from "./+types/home";
 import { prisma } from "../lib/db.server";
 import { getUserId } from "../lib/session.server";
-import { redirect, Form, useNavigation, useFetcher } from "react-router";
+import { redirect, Form, useFetcher } from "react-router";
 import CoffeeCard from "../components/CoffeeCard";
 import { getRecommendationsForUser, getTrendingRecipes } from "../lib/recommendations.server";
 
@@ -20,14 +20,17 @@ export function meta({}: Route.MetaArgs) {
 export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const searchQuery = url.searchParams.get("search")?.trim() || "";
+  const page = parseInt(url.searchParams.get("page") || "1", 10);
+  const limit = 6;
+  const skip = (page - 1) * limit;
   const userId = await getUserId(request);
 
   // Get personalized recommendations or trending recipes
-  let recommendations = [];
+  let recommendations: any[] = [];
   if (userId) {
-    recommendations = await getRecommendationsForUser(userId, 6);
+    recommendations = await getRecommendationsForUser(userId, limit, skip);
   } else {
-    recommendations = await getTrendingRecipes(6);
+    recommendations = await getTrendingRecipes(limit, skip);
   }
 
   // Only fetch recipes if there's a search query
@@ -74,7 +77,8 @@ export async function loader({ request }: Route.LoaderArgs) {
         _count: { select: { likes: true, savedBy: true } },
       },
       orderBy: { createdAt: "desc" },
-      take: 50, // Limit results
+      take: limit,
+      skip: skip,
     });
     allRecipeIds.push(...recipes.map(r => r.id));
   }
@@ -157,6 +161,8 @@ export async function loader({ request }: Route.LoaderArgs) {
     userSaves,
     searchQuery,
     userId,
+    page,
+    limit,
   };
 }
 
@@ -196,44 +202,82 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const { recipes, userLikes, userSaves, userId, recommendations, searchQuery } = loaderData;
+  const {
+    recommendations: initialRecommendations,
+    recipes: initialRecipes,
+    userLikes,
+    userSaves,
+    userId,
+    searchQuery,
+    limit,
+  } = loaderData;
+
   const [search, setSearch] = useState(searchQuery || "");
-  const fetcher = useFetcher();
+  const [recommendations, setRecommendations] = useState(initialRecommendations);
+  const [recipes, setRecipes] = useState(initialRecipes);
+
+  const searchFetcher = useFetcher();
+  const loadMoreFetcher = useFetcher();
   const isFirstRun = useRef(true);
 
-  // Callback to reload home feed after like/save
+  // This handles re-syncing data after a user likes or saves a recipe.
   const handleLikeSave = useCallback(() => {
-    // If searching, refresh results. If not, the main loader revalidates automatically.
-    // We use the fetcher to reload the current view without a hard page reload.
     const params = new URLSearchParams();
     if (search) params.set("search", search);
     const queryStr = params.toString();
-    fetcher.load(`/?index${queryStr ? `&${queryStr}` : ""}`);
-  }, [search, fetcher]);
+    searchFetcher.load(`/?index${queryStr ? `&${queryStr}` : ""}`);
+  }, [search, searchFetcher]);
+
+  // This effect replaces the list when a new search is performed.
+  useEffect(() => {
+    if (searchFetcher.data) {
+      setRecipes(searchFetcher.data.recipes || []);
+    }
+  }, [searchFetcher.data]);
+
+  // This effect appends new items when the "Load More" fetcher gets data.
+  useEffect(() => {
+    if (loadMoreFetcher.data) {
+      if (search) {
+        setRecipes(prev => [...prev, ...(loadMoreFetcher.data.recipes || [])]);
+      } else {
+        setRecommendations(prev => [...prev, ...(loadMoreFetcher.data.recommendations || [])]);
+      }
+    }
+  }, [loadMoreFetcher.data, search]);
 
   // Debounced instant search
   useEffect(() => {
-    // Prevent double-fetch on initial load
     if (isFirstRun.current) {
         isFirstRun.current = false;
-        if (search === (searchQuery || "")) return;
+        return;
     }
-
     const timeout = setTimeout(() => {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
       const queryStr = params.toString();
-      fetcher.load(`/?index${queryStr ? `&${queryStr}` : ""}`);
+      searchFetcher.load(`/?index${queryStr ? `&${queryStr}` : ""}`);
     }, 250);
     return () => clearTimeout(timeout);
   }, [search]);
 
-  // Use fetcher data if available, else loaderData
-  const data = fetcher.data || loaderData;
-  const displayRecommendations = data?.recommendations || [];
-  const displayRecipes = data?.recipes || [];
-  const currentLikes = data?.userLikes || [];
-  const currentSaves = data?.userSaves || [];
+  const handleLoadMore = () => {
+    const currentList = search ? recipes : recommendations;
+    const currentPage = Math.ceil(currentList.length / limit);
+    const nextPage = currentPage + 1;
+
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    params.set("page", String(nextPage));
+    const queryStr = params.toString();
+    loadMoreFetcher.load(`/?index${queryStr ? `&${queryStr}` : ""}`);
+  };
+
+  const currentLikes = searchFetcher.data?.userLikes || userLikes;
+  const currentSaves = searchFetcher.data?.userSaves || userSaves;
+
+  const activeList = search ? recipes : recommendations;
+  const showLoadMore = activeList.length > 0 && activeList.length % limit === 0 && loadMoreFetcher.state === 'idle';
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-6 sm:py-8">
@@ -277,7 +321,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </div>
         </Form>
       </section>      {/* For You / Trending Section - Hide when searching */}
-      {!search && displayRecommendations.length > 0 && (
+      {!search && recommendations.length > 0 && (
         <section className="mb-8 sm:mb-12" aria-labelledby="recommendations-heading">
           <div className="flex items-center justify-between mb-4">
             <h2 id="recommendations-heading" className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
@@ -298,7 +342,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               : "Popular recipes loved by the CoffeeMixer community"}
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {(displayRecommendations as any[]).map((recipe) => (
+            {recommendations.map((recipe) => (
               <CoffeeCard
                 key={recipe.id}
                 id={recipe.id}
@@ -324,7 +368,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       {/* Search Results */}
       {search && (
         <>
-          {fetcher.state !== 'idle' ? (
+          {searchFetcher.state !== 'idle' && recipes.length === 0 ? (
             <div className="text-center py-16">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto" role="status">
                 <span className="sr-only">Loading...</span>
@@ -332,8 +376,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               <p className="text-gray-500 dark:text-gray-400 text-lg mt-4">
                 Searching for recipes...
               </p>
-            </div>
-          ) : displayRecipes.length === 0 ? (
+            </div>)
+           : recipes.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-5xl mb-4" aria-hidden="true">🔍</p>
               <p className="text-gray-500 dark:text-gray-400 text-lg mb-2">
@@ -350,17 +394,17 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               </a>
             </div>
           ) : (
-            <section aria-label={`${displayRecipes.length} search results`}>
+            <section aria-label={`${recipes.length} search results`}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                   Search Results for "{search}"
                 </h2>
                 <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {displayRecipes.length} {displayRecipes.length === 1 ? "result" : "results"}
+                  {recipes.length} {recipes.length === 1 ? "result" : "results"}
                 </span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {(displayRecipes as any[]).map((recipe) => (
+                {recipes.map((recipe) => (
                   <CoffeeCard
                     key={recipe.id}
                     id={recipe.id}
@@ -383,6 +427,26 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             </section>
           )}
         </>
+      )}
+
+      {/* Load More Button */}
+      {showLoadMore && (
+        <div className="mt-10 mb-16 sm:mb-24 text-center">
+          <button
+            onClick={handleLoadMore}
+            disabled={loadMoreFetcher.state !== "idle"}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-medium hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-gray-950 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loadMoreFetcher.state !== "idle" ? (
+              <>
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                Loading...
+              </>
+            ) : (
+              "Load More"
+            )}
+          </button>
+        </div>
       )}
     </main>
   );
