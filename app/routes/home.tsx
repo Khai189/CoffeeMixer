@@ -38,11 +38,6 @@ export async function loader({ request }: Route.LoaderArgs) {
   let userLikes: string[] = [];
   let userSaves: string[] = [];
 
-  // Collect all recipe IDs shown
-  const allRecipeIds = [
-    ...recommendations.map(r => r.id),
-    ...(searchQuery ? [] : []), // will be filled below
-  ];
 
   if (searchQuery) {
     // Use raw query to perform fuzzy search (ILIKE) on the ingredients array
@@ -80,18 +75,17 @@ export async function loader({ request }: Route.LoaderArgs) {
       take: limit,
       skip: skip,
     });
-    allRecipeIds.push(...recipes.map(r => r.id));
   }
 
-  // If user is logged in, get their likes and saves for all shown recipes
-  if (userId && allRecipeIds.length > 0) {
+  // If user is logged in, get all their likes and saves
+  if (userId) {
     const [likes, saves] = await Promise.all([
       prisma.like.findMany({
-        where: { userId, recipeId: { in: allRecipeIds } },
+        where: { userId },
         select: { recipeId: true },
       }),
       prisma.savedRecipe.findMany({
-        where: { userId, recipeId: { in: allRecipeIds } },
+        where: { userId },
         select: { recipeId: true },
       }),
     ]);
@@ -221,12 +215,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const isFirstRun = useRef(true);
 
   // This handles re-syncing data after a user likes or saves a recipe.
-  const handleLikeSave = useCallback(() => {
-    const params = new URLSearchParams();
-    if (search) params.set("search", search);
-    const queryStr = params.toString();
-    searchFetcher.load(`/?index${queryStr ? `&${queryStr}` : ""}`);
-  }, [search, searchFetcher]);
+  const handleLikeSave = useCallback(() => {}, []);
 
   // This effect replaces the list when a new search is performed.
   useEffect(() => {
@@ -261,6 +250,32 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     return () => clearTimeout(timeout);
   }, [search]);
 
+  const [prevUserLikes, setPrevUserLikes] = useState(userLikes);
+
+  // Sync like count changes based on userLikes changing from loader revalidation
+  useEffect(() => {
+    const newlyLiked = userLikes.filter((id: string) => !prevUserLikes.includes(id));
+    const newlyUnliked = prevUserLikes.filter((id: string) => !userLikes.includes(id));
+
+    if (newlyLiked.length > 0 || newlyUnliked.length > 0) {
+      const updateCount = (r: any) => {
+        if (newlyLiked.includes(r.id)) {
+          return { ...r, _count: { ...r._count, likes: r._count.likes + 1 } };
+        }
+        if (newlyUnliked.includes(r.id)) {
+          return { ...r, _count: { ...r._count, likes: Math.max(0, r._count.likes - 1) } };
+        }
+        return r;
+      };
+
+      setRecommendations(prev => prev.map(updateCount));
+      setRecipes(prev => prev.map(updateCount));
+      setPrevUserLikes(userLikes);
+    } else if (userLikes !== prevUserLikes) {
+      setPrevUserLikes(userLikes);
+    }
+  }, [userLikes, prevUserLikes]);
+
   const handleLoadMore = () => {
     const currentList = search ? recipes : recommendations;
     const currentPage = Math.ceil(currentList.length / limit);
@@ -273,8 +288,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     loadMoreFetcher.load(`/?index${queryStr ? `&${queryStr}` : ""}`);
   };
 
-  const currentLikes = searchFetcher.data?.userLikes || userLikes;
-  const currentSaves = searchFetcher.data?.userSaves || userSaves;
+  const currentLikes = userLikes;
+  const currentSaves = userSaves;
 
   const activeList = search ? recipes : recommendations;
   const showLoadMore = activeList.length > 0 && activeList.length % limit === 0 && loadMoreFetcher.state === 'idle';
