@@ -24,7 +24,9 @@ export default function Navbar({ user }: NavbarProps) {
             <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
                 {/* Logo */}
                 <Link to="/" className="flex items-center gap-2" aria-label="CoffeeMixer home">
-                    <img src="/favicon.ico" alt="" className="w-8 h-8" aria-hidden="true" />
+                    <div className="bg-white rounded-full p-0.5 shadow-sm">
+                        <img src="/favicon.ico" alt="" className="w-8 h-8" aria-hidden="true" />
+                    </div>
                     <span className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
                         CoffeeMixer
                     </span>
