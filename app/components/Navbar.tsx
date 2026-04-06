@@ -23,11 +23,11 @@ export default function Navbar({ user }: NavbarProps) {
         <nav className="sticky top-0 z-50 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800" aria-label="Main navigation">
             <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
                 {/* Logo */}
-                <Link to="/" className="flex items-center gap-2 -ml-1" aria-label="CoffeeMixer home">
-                    <div className="bg-white rounded-full p-0.5 shadow-sm">
+                <Link to="/" className="flex items-center gap-3 -ml-1 group" aria-label="CoffeeMixer home">
+                    <div className="bg-white rounded-full p-0.5 shadow-sm ring-2 ring-amber-500/50 group-hover:ring-amber-500 transition-all">
                         <img src="/favicon.ico" alt="" className="w-8 h-8" aria-hidden="true" />
                     </div>
-                    <span className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
+                    <span className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
                         CoffeeMixer
                     </span>
                 </Link>
