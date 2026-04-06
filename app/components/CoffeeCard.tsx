@@ -79,7 +79,7 @@ export default function CoffeeCard({
     const showImage = imageUrl && !imgError;
 
     return (
-        <article className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden hover:shadow-lg hover:border-amber-300 dark:hover:border-amber-700 transition-all" aria-label={`${name} by ${author}`}>
+        <article className="animate-slide-up-fade rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden hover:shadow-lg hover:border-amber-300 dark:hover:border-amber-700 transition-all" aria-label={`${name} by ${author}`}>
             {/* Image area -- always present */}
             <Link to={`/recipe/${id}`} className="block relative h-48 overflow-hidden">
                 {showImage ? (

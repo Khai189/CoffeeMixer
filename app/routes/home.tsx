@@ -156,6 +156,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const [recommendations, setRecommendations] = useState(initialRecommendations);
   const [recipes, setRecipes] = useState(initialRecipes);
 
+  const [hasMoreRecs, setHasMoreRecs] = useState(initialRecommendations.length === limit);
+  const [hasMoreSearch, setHasMoreSearch] = useState(initialRecipes.length === limit);
+
   const searchFetcher = useFetcher();
   const loadMoreFetcher = useFetcher();
   const isFirstRun = useRef(true);
@@ -166,20 +169,26 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   // This effect replaces the list when a new search is performed.
   useEffect(() => {
     if (searchFetcher.data) {
-      setRecipes(searchFetcher.data.recipes || []);
+      const data = searchFetcher.data.recipes || [];
+      setRecipes(data);
+      setHasMoreSearch(data.length === limit);
     }
-  }, [searchFetcher.data]);
+  }, [searchFetcher.data, limit]);
 
   // This effect appends new items when the "Load More" fetcher gets data.
   useEffect(() => {
     if (loadMoreFetcher.data) {
       if (search) {
-        setRecipes(prev => [...prev, ...(loadMoreFetcher.data.recipes || [])]);
+        const data = loadMoreFetcher.data.recipes || [];
+        setRecipes(prev => [...prev, ...data]);
+        setHasMoreSearch(data.length === limit);
       } else {
-        setRecommendations(prev => [...prev, ...(loadMoreFetcher.data.recommendations || [])]);
+        const data = loadMoreFetcher.data.recommendations || [];
+        setRecommendations(prev => [...prev, ...data]);
+        setHasMoreRecs(data.length === limit);
       }
     }
-  }, [loadMoreFetcher.data, search]);
+  }, [loadMoreFetcher.data, search, limit]);
 
   // Debounced instant search
   useEffect(() => {
