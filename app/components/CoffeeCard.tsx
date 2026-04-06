@@ -158,7 +158,7 @@ export default function CoffeeCard({
                             <input type="hidden" name="recipeId" value={id} />
                             <button
                                 type="submit"
-                                className={`flex items-center gap-1 transition-colors outline-none rounded-md p-1 ${isLiked ? "text-red-500" : "text-gray-400 hover:text-red-500"}`}
+                                className={`flex items-center gap-1 transition-all hover:scale-110 cursor-pointer outline-none rounded-md p-1 ${isLiked ? "text-red-500" : "text-gray-400 hover:text-red-500"}`}
                                 aria-label={isLiked ? `Unlike ${name} (${displayLikes} likes)` : `Like ${name} (${displayLikes} likes)`}
                                 aria-pressed={isLiked}
                             >
@@ -171,7 +171,7 @@ export default function CoffeeCard({
                             <input type="hidden" name="recipeId" value={id} />
                             <button
                                 type="submit"
-                                className={`transition-colors outline-none rounded-md p-1 ${isSaved ? "text-amber-500" : "text-gray-400 hover:text-amber-500"}`}
+                                className={`transition-all hover:scale-110 cursor-pointer outline-none rounded-md p-1 ${isSaved ? "text-amber-500" : "text-gray-400 hover:text-amber-500"}`}
                                 aria-label={isSaved ? `Unsave ${name}` : `Save ${name}`}
                                 aria-pressed={isSaved}
                             >

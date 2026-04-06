@@ -236,7 +236,7 @@ export default function RecipePage({ loaderData }: Route.ComponentProps) {
                             type="submit"
                             aria-label={isLiked ? `Unlike ${recipe.name} (${displayLikes} likes)` : `Like ${recipe.name} (${displayLikes} likes)`}
                             aria-pressed={isLiked}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors outline-none ${isLiked ? "bg-red-50 dark:bg-red-950 text-red-600" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-950 hover:text-red-600"}`}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all hover:scale-105 cursor-pointer outline-none ${isLiked ? "bg-red-50 dark:bg-red-950 text-red-600" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-950 hover:text-red-600"}`}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill={isLiked ? "currentColor" : "none"} viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" /></svg>
                             {displayLikes} {displayLikes === 1 ? "Like" : "Likes"}
@@ -248,7 +248,7 @@ export default function RecipePage({ loaderData }: Route.ComponentProps) {
                             type="submit"
                             aria-label={isSaved ? `Unsave ${recipe.name}` : `Save ${recipe.name}`}
                             aria-pressed={isSaved}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors outline-none ${isSaved ? "bg-amber-50 dark:bg-amber-950 text-amber-600" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-amber-50 dark:hover:bg-amber-950 hover:text-amber-600"}`}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all hover:scale-105 cursor-pointer outline-none ${isSaved ? "bg-amber-50 dark:bg-amber-950 text-amber-600" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-amber-50 dark:hover:bg-amber-950 hover:text-amber-600"}`}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill={isSaved ? "currentColor" : "none"} viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" /></svg>
                             {isSaved ? "Saved" : "Save"}
