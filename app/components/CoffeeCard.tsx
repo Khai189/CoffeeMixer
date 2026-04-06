@@ -153,7 +153,7 @@ export default function CoffeeCard({
                         {brewMethod}
                     </span>
                     <div className="flex items-center gap-3">
-                        <likeFetcher.Form method="post" action="/?index">
+                        <likeFetcher.Form method="post" action="/?index" className="outline-none" tabIndex={-1}>
                             <input type="hidden" name="intent" value="like" />
                             <input type="hidden" name="recipeId" value={id} />
                             <button
@@ -166,7 +166,7 @@ export default function CoffeeCard({
                                 <span className="text-xs">{displayLikes}</span>
                             </button>
                         </likeFetcher.Form>
-                        <saveFetcher.Form method="post" action="/?index">
+                        <saveFetcher.Form method="post" action="/?index" className="outline-none" tabIndex={-1}>
                             <input type="hidden" name="intent" value="save" />
                             <input type="hidden" name="recipeId" value={id} />
                             <button
