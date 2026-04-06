@@ -1,8 +1,7 @@
 import type { Route } from "../+types/user";
 import { prisma } from "../lib/db.server";
 import { Form } from "react-router";
-import { existsSync } from "fs";
-import { join } from "path";
+import { checkImage } from "../lib/image.server";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -24,15 +23,6 @@ export async function loader({ params }: Route.LoaderArgs) {
         take: 10,
     });
 
-    function checkImage(url: string | null | undefined, fallback: string) {
-        if (typeof url === "string" && url.startsWith("/uploads/")) {
-            const imagePath = join(process.cwd(), "public", url);
-            if (!existsSync(imagePath)) return fallback;
-        }
-        return typeof url === "string" && url.length > 0 ? url : fallback;
-    }
-
-    // Patch profile image for user
     const patchedProfile = {
         favoriteDrink: user.profile?.favoriteDrink || "",
         brewMethod: user.profile?.brewMethod || "Espresso",
@@ -42,10 +32,9 @@ export async function loader({ params }: Route.LoaderArgs) {
         pfpUrl: checkImage(user.profile?.pfpUrl, "/default-pfp.png"),
     };
 
-    // Patch recipe images for feed
     const patchedFeed = recipes.map(recipe => ({
         ...recipe,
-        imageUrl: checkImage(recipe.imageUrl, "/default-recipe.png"),
+        imageUrl: checkImage(recipe.imageUrl),
     }));
 
     return {

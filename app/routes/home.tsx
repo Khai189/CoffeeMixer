@@ -5,6 +5,7 @@ import { getUserId } from "../lib/session.server";
 import { redirect, Form, useFetcher } from "react-router";
 import CoffeeCard from "../components/CoffeeCard";
 import { getRecommendationsForUser, getTrendingRecipes } from "../lib/recommendations.server";
+import { patchRecipeImages } from "../lib/image.server";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -93,64 +94,9 @@ export async function loader({ request }: Route.LoaderArgs) {
     userSaves = saves.map((s) => s.recipeId);
   }
 
-  // Utility for robust image fallback (no fs/path, serverless-safe)
-  function checkImage(url: string | null | undefined, fallback: string) {
-    // If the url is missing, empty, or not a string, fallback
-    if (!url || typeof url !== "string" || url.length === 0) return fallback;
-    // If the url is for uploads, just return it (let client handle 404)
-    return url;
-  }
-
-  // Patch recipe and pfp images for recommendations and search results
-  const patchedRecommendations = recommendations.map(recipe => {
-    let authorPfpUrl = "/default-pfp.png";
-    // Defensive: check for profile property and pfpUrl
-    if (
-      recipe.author &&
-      typeof recipe.author === "object" &&
-      "profile" in recipe.author &&
-      recipe.author.profile &&
-      typeof recipe.author.profile === "object" &&
-      "pfpUrl" in recipe.author.profile &&
-      typeof (recipe.author.profile as any).pfpUrl === "string"
-    ) {
-      authorPfpUrl = checkImage((recipe.author.profile as any).pfpUrl, "/default-pfp.png");
-    }
-    return {
-      ...recipe,
-      imageUrl: checkImage(recipe.imageUrl, "/default-recipe.png"),
-      author: {
-        ...recipe.author,
-        authorPfpUrl,
-      },
-    };
-  });
-  const patchedRecipes = recipes.map(recipe => {
-    let authorPfpUrl = "/default-pfp.png";
-    if (
-      recipe.author &&
-      typeof recipe.author === "object" &&
-      "profile" in recipe.author &&
-      recipe.author.profile &&
-      typeof recipe.author.profile === "object" &&
-      "pfpUrl" in recipe.author.profile &&
-      typeof (recipe.author.profile as any).pfpUrl === "string"
-    ) {
-      authorPfpUrl = checkImage((recipe.author.profile as any).pfpUrl, "/default-pfp.png");
-    }
-    return {
-      ...recipe,
-      imageUrl: checkImage(recipe.imageUrl, "/default-recipe.png"),
-      author: {
-        ...recipe.author,
-        authorPfpUrl,
-      },
-    };
-  });
-
   return {
-    recommendations: patchedRecommendations,
-    recipes: patchedRecipes,
+    recommendations: patchRecipeImages(recommendations),
+    recipes: patchRecipeImages(recipes),
     userLikes,
     userSaves,
     searchQuery,
@@ -372,7 +318,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 liked={currentLikes.includes(recipe.id)}
                 saved={currentSaves.includes(recipe.id)}
                 imageUrl={recipe.imageUrl}
-                authorPfpUrl={recipe.author?.authorPfpUrl || null}
+                authorPfpUrl={recipe.author?.profile?.pfpUrl || null}
                 onLikeSave={handleLikeSave}
               />
             ))}
@@ -434,7 +380,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                     liked={currentLikes.includes(recipe.id)}
                     saved={currentSaves.includes(recipe.id)}
                     imageUrl={recipe.imageUrl}
-                    authorPfpUrl={recipe.author?.authorPfpUrl || null}
+                    authorPfpUrl={recipe.author?.profile?.pfpUrl || null}
                     onLikeSave={handleLikeSave}
                   />
                 ))}

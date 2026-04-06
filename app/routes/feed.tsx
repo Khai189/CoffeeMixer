@@ -6,7 +6,7 @@ import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { useState } from "react";
 import ImageCropModal from "../components/ImageCropModal";
-import { existsSync } from "fs";
+import { checkImage } from "../lib/image.server";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -32,22 +32,14 @@ export async function loader({ request }: Route.LoaderArgs) {
         take: 50,
     });
 
-    function checkImage(url: string | null | undefined, fallback: string) {
-        if (typeof url === "string" && url.startsWith("/uploads/")) {
-            const imagePath = join(process.cwd(), "public", url);
-            if (!existsSync(imagePath)) return fallback;
-        }
-        return typeof url === "string" && url.length > 0 ? url : fallback;
-    }
-
-    // Patch profile image for posts
     const safePosts = posts.map(post => ({
         ...post,
         author: {
             ...post.author,
-            profile: post.author.profile && post.author.profile.pfpUrl
-                ? { pfpUrl: checkImage(post.author.profile.pfpUrl, "/default-pfp.png") }
-                : { pfpUrl: "/default-pfp.png" },
+            profile: {
+                ...post.author.profile,
+                pfpUrl: checkImage(post.author?.profile?.pfpUrl, "/default-pfp.png"),
+            },
         },
     }));
 
@@ -361,7 +353,7 @@ function PostCard({
         body: string;
         imageUrl: string | null;
         createdAt: Date | string;
-        author: { id: string; name: string; profile?: { pfpUrl?: string } };
+        author: { id: string; name: string; profile?: { pfpUrl?: string | null } };
     };
     isOwner: boolean;
     onEdit?: (id: string, body: string) => void;

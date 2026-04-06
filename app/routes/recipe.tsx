@@ -2,9 +2,9 @@ import type { Route } from "./+types/recipe";
 import { prisma } from "../lib/db.server";
 import { getUserId } from "../lib/session.server";
 import { Link, useFetcher, redirect } from "react-router";
-import React from "react";
-import { existsSync } from "fs";
-import { join } from "path";
+import React, { useState } from "react";
+import { checkImage } from "../lib/image.server";
+import RecipePlaceholder from "../components/RecipePlaceholder";
 
 export async function loader({ params, request }: Route.LoaderArgs) {
     const userId = await getUserId(request);
@@ -29,31 +29,14 @@ export async function loader({ params, request }: Route.LoaderArgs) {
         saved = !!saveRecord;
     }
 
-    // Check if recipe image file exists
-    let recipeImageUrl = recipe.imageUrl || "/default-recipe.png";
-    if (recipe.imageUrl && recipe.imageUrl.startsWith("/uploads/")) {
-        const imagePath = join(process.cwd(), "public", recipe.imageUrl);
-        if (!existsSync(imagePath)) {
-            recipeImageUrl = "/default-recipe.png";
-        }
-    }
-    // Check if author profile image file exists
-    let authorPfpUrl = recipe.author?.profile?.pfpUrl || "/default-pfp.png";
-    if (recipe.author?.profile?.pfpUrl && recipe.author.profile.pfpUrl.startsWith("/uploads/")) {
-        const pfpPath = join(process.cwd(), "public", recipe.author.profile.pfpUrl);
-        if (!existsSync(pfpPath)) {
-            authorPfpUrl = "/default-pfp.png";
-        }
-    }
-    // Patch recipe object to always have valid imageUrl and authorPfpUrl
     const patchedRecipe = {
         ...recipe,
-        imageUrl: recipeImageUrl,
+        imageUrl: checkImage(recipe.imageUrl),
         author: {
             ...recipe.author,
             profile: {
                 ...recipe.author?.profile,
-                pfpUrl: authorPfpUrl,
+                pfpUrl: checkImage(recipe.author?.profile?.pfpUrl, "/default-pfp.png"),
             },
         },
     };
@@ -158,6 +141,8 @@ export default function RecipePage({ loaderData }: Route.ComponentProps) {
 
     const isOwner = userId && recipe.author?.id === userId;
     const [showEdit, setShowEdit] = React.useState(false);
+    const [imgError, setImgError] = useState(false);
+    const showImage = recipe.imageUrl && !imgError;
 
     const isLiked = likeFetcher.formData ? !liked : liked;
     const isSaved = saveFetcher.formData ? !saved : saved;
@@ -174,14 +159,18 @@ export default function RecipePage({ loaderData }: Route.ComponentProps) {
             <article className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
                 {/* Header */}
                 <div className="p-6 border-b border-gray-100 dark:border-gray-800">
-                    {recipe.imageUrl ? (
-                        <img
-                            src={recipe.imageUrl}
-                            alt={recipe.name}
-                            className="w-full h-48 object-cover rounded-xl mb-6 border border-gray-200 dark:border-gray-800"
-                            onError={e => { e.currentTarget.src = "/default-recipe.png"; }}
-                        />
-                    ) : null}
+                    <div className="w-full h-56 rounded-xl mb-6 overflow-hidden border border-gray-200 dark:border-gray-800">
+                        {showImage ? (
+                            <img
+                                src={recipe.imageUrl!}
+                                alt={recipe.name}
+                                className="w-full h-full object-cover"
+                                onError={() => setImgError(true)}
+                            />
+                        ) : (
+                            <RecipePlaceholder recipeId={recipe.id} brewMethod={recipe.brewMethod} className="w-full h-full" />
+                        )}
+                    </div>
                     <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
                             {recipe.author?.profile?.pfpUrl ? (

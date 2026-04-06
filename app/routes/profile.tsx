@@ -3,8 +3,7 @@ import { prisma } from "../lib/db.server";
 import { requireUserId } from "../lib/session.server";
 import { redirect, Form, useNavigation, useFetcher } from "react-router";
 import { useState } from "react";
-import { existsSync } from "fs";
-import { join } from "path";
+import { checkImage } from "../lib/image.server";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -35,20 +34,6 @@ export async function loader({ request }: Route.LoaderArgs) {
         take: 10,
     });
 
-    function checkImage(url: string | null | undefined, fallback: string) {
-        try {
-            if (typeof url === "string" && url.startsWith("/uploads/")) {
-                const imagePath = join(process.cwd(), "public", url);
-                if (!existsSync(imagePath)) return fallback;
-            }
-            return typeof url === "string" && url.length > 0 ? url : fallback;
-        } catch (err) {
-            // If Railway/serverless doesn't support fs, always fallback
-            return fallback;
-        }
-    }
-
-    // Patch profile image for user
     const patchedProfile = {
         favoriteDrink: user.profile?.favoriteDrink || "",
         brewMethod: user.profile?.brewMethod || "Espresso",
@@ -58,10 +43,9 @@ export async function loader({ request }: Route.LoaderArgs) {
         pfpUrl: checkImage(user.profile?.pfpUrl, "/default-pfp.png"),
     };
 
-    // Patch recipe images for feed
     const patchedFeed = recipes.map(recipe => ({
         ...recipe,
-        imageUrl: checkImage(recipe.imageUrl, "/default-recipe.png"),
+        imageUrl: checkImage(recipe.imageUrl),
     }));
 
     return {
@@ -162,7 +146,7 @@ export default function ProfilePage({ loaderData, actionData }: Route.ComponentP
                 <input type="hidden" name="milkPreference" value={milkPreference} />
                 <input type="hidden" name="sweetnessLevel" value={sweetness} />
                 <input type="hidden" name="strengthLevel" value={strength} />
-                <input type="hidden" name="pfpUrl" value={pfpUrl} />
+                <input type="hidden" name="pfpUrl" value={pfpUrl ?? ""} />
 
                 {/* Header with avatar upload */}
                 <div className="flex items-center gap-4">

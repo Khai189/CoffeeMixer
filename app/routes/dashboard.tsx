@@ -5,8 +5,7 @@ import { Link } from "react-router";
 import CoffeeCard from "../components/CoffeeCard";
 import { useCallback, useState } from "react";
 import { useFetcher } from "react-router";
-import { existsSync } from "fs";
-import { join } from "path";
+import { patchRecipeImages } from "../lib/image.server";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -58,40 +57,8 @@ export async function loader({ request }: Route.LoaderArgs) {
     const userLikes = likedRecipes.map((l) => l.recipeId);
     const userSaves = savedRecipes.map((s) => s.recipeId);
 
-    function checkImage(url: string | null | undefined, fallback: string) {
-        if (typeof url === "string" && url.startsWith("/uploads/")) {
-            const imagePath = join(process.cwd(), "public", url);
-            if (!existsSync(imagePath)) return fallback;
-        }
-        return typeof url === "string" && url.length > 0 ? url : fallback;
-    }
-
-    // Patch recipe and pfp images for savedRecipes and myRecipes
-    const patchedSavedRecipes = savedRecipes.map(sr => {
-        const recipe = sr.recipe;
-        return {
-            ...recipe,
-            imageUrl: checkImage(recipe.imageUrl, "/default-recipe.png"),
-            author: {
-                ...recipe.author,
-                profile: {
-                    ...recipe.author?.profile,
-                    pfpUrl: checkImage(recipe.author?.profile?.pfpUrl, "/default-pfp.png"),
-                },
-            },
-        };
-    });
-    const patchedMyRecipes = myRecipes.map(recipe => ({
-        ...recipe,
-        imageUrl: checkImage(recipe.imageUrl, "/default-recipe.png"),
-        author: {
-            ...recipe.author,
-            profile: {
-                ...recipe.author?.profile,
-                pfpUrl: checkImage(recipe.author?.profile?.pfpUrl, "/default-pfp.png"),
-            },
-        },
-    }));
+    const patchedSavedRecipes = patchRecipeImages(savedRecipes.map(sr => sr.recipe));
+    const patchedMyRecipes = patchRecipeImages(myRecipes);
 
     return {
         userName: user?.name || "Coffee Lover",
