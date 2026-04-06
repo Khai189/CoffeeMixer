@@ -4,7 +4,7 @@ import { getUserId, requireUserId } from "../lib/session.server";
 import { Form, Link, useFetcher } from "react-router";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ImageCropModal from "../components/ImageCropModal";
 import { checkImage } from "../lib/image.server";
 
@@ -363,7 +363,13 @@ function PostCard({
     const [editBody, setEditBody] = useState(post.body);
     const isDeleting = fetcher.state !== "idle" && fetcher.formData?.get("postId") === post.id;
 
-    if (isDeleting) return null; // optimistic removal
+    useEffect(() => {
+        if (editing && fetcher.state === "idle" && fetcher.data) {
+            setEditing(false);
+        }
+    }, [editing, fetcher.state, fetcher.data]);
+
+    if (isDeleting) return null;
 
     return (
         <article className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden transition-colors">
@@ -399,12 +405,12 @@ function PostCard({
                         <div className="flex gap-2">
                             <button
                                 type="button"
-                                className="text-gray-400 hover:text-amber-600 focus:outline-none transition-colors p-1 rounded-lg"
+                                className="text-gray-400 hover:text-amber-600 outline-none transition-colors p-1 rounded-lg"
                                 aria-label="Edit this post"
                                 onClick={() => setEditing(true)}
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true">
-                                    <path d="M17.211 6.293a2.25 2.25 0 0 0 0-3.182l-.322-.322a2.25 2.25 0 0 0-3.182 0l-8.1 8.1a2.25 2.25 0 0 0-.573.97l-.7 2.8a.75.75 0 0 0 .91.91l2.8-.7a2.25 2.25 0 0 0 .97-.573l8.1-8.1ZM15.8 2.889a.75.75 0 0 1 1.06 1.06l-.322.322-1.06-1.06.322-.322ZM14.74 3.95l1.06 1.06-8.1 8.1a.75.75 0 0 1-.323.194l-2.8.7.7-2.8a.75.75 0 0 1 .194-.323l8.1-8.1Z" />
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4" aria-hidden="true">
+                                    <path d="M21.731 2.269a2.625 2.625 0 0 0-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 0 0 0-3.712ZM19.513 8.199l-3.712-3.712-8.4 8.4a5.25 5.25 0 0 0-1.32 2.214l-.8 2.685a.75.75 0 0 0 .933.933l2.685-.8a5.25 5.25 0 0 0 2.214-1.32l8.4-8.4Z" />
                                 </svg>
                             </button>
                             <fetcher.Form method="post">
@@ -412,7 +418,7 @@ function PostCard({
                                 <input type="hidden" name="postId" value={post.id} />
                                 <button
                                     type="submit"
-                                    className="text-gray-400 hover:text-red-500 focus:outline-none focus:text-red-500 transition-colors p-1 rounded-lg"
+                                    className="text-gray-400 hover:text-red-500 outline-none transition-colors p-1 rounded-lg"
                                     aria-label="Delete this post"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true">
@@ -422,26 +428,30 @@ function PostCard({
                             </fetcher.Form>
                         </div>
                     )}
-                    {isOwner && editing && (
-                        <fetcher.Form method="post" className="flex gap-2 items-center">
-                            <input type="hidden" name="intent" value="edit" />
-                            <input type="hidden" name="postId" value={post.id} />
-                            <textarea
-                                name="body"
-                                value={editBody}
-                                onChange={e => setEditBody(e.target.value)}
-                                className="w-64 px-2 py-1 rounded border border-gray-300 dark:border-gray-700 text-sm"
-                                maxLength={500}
-                                required
-                            />
-                            <button type="submit" className="text-amber-600 font-medium px-2 py-1 rounded hover:bg-amber-50 dark:hover:bg-amber-900">Save</button>
-                            <button type="button" className="text-gray-400 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800" onClick={() => setEditing(false)}>Cancel</button>
-                        </fetcher.Form>
-                    )}
                 </div>
 
-                {/* Body */}
-                {editing ? null : (
+                {/* Body or edit form */}
+                {editing ? (
+                    <fetcher.Form method="post" className="space-y-3">
+                        <input type="hidden" name="intent" value="edit" />
+                        <input type="hidden" name="postId" value={post.id} />
+                        <textarea
+                            name="body"
+                            value={editBody}
+                            onChange={e => setEditBody(e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm outline-none focus:ring-2 focus:ring-amber-500 resize-none"
+                            rows={3}
+                            maxLength={500}
+                            required
+                        />
+                        <div className="flex gap-2 justify-end">
+                            <button type="button" className="px-3 py-1.5 text-sm text-gray-500 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" onClick={() => { setEditing(false); setEditBody(post.body); }}>Cancel</button>
+                            <button type="submit" disabled={fetcher.state !== "idle"} className="px-3 py-1.5 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors">
+                                {fetcher.state !== "idle" ? "Saving..." : "Save"}
+                            </button>
+                        </div>
+                    </fetcher.Form>
+                ) : (
                     <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">
                         {post.body}
                     </p>
