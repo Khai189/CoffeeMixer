@@ -91,7 +91,7 @@ export default function CoffeeCard({
                         onError={() => setImgError(true)}
                     />
                 ) : (
-                    <RecipePlaceholder recipeId={id} brewMethod={brewMethod} className="w-full h-full" />
+                    <RecipePlaceholder recipeId={id} className="w-full h-full" />
                 )}
                 <span className={`absolute top-3 right-3 text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm ${difficultyColors[difficulty]}`} aria-label={`Difficulty: ${difficulty}`}>
                     {difficulty}

@@ -168,7 +168,7 @@ export default function RecipePage({ loaderData }: Route.ComponentProps) {
                                 onError={() => setImgError(true)}
                             />
                         ) : (
-                            <RecipePlaceholder recipeId={recipe.id} brewMethod={recipe.brewMethod} className="w-full h-full" />
+                            <RecipePlaceholder recipeId={recipe.id} className="w-full h-full" />
                         )}
                     </div>
                     <div className="flex items-start justify-between mb-4">

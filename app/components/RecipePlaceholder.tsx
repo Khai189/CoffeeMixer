@@ -18,15 +18,6 @@ const GRADIENT_DIRECTIONS = [
     "bg-linear-to-b",
 ];
 
-const BREW_EMOJIS: Record<string, string> = {
-    Espresso: "☕",
-    "French Press": "🫖",
-    "Pour Over": "💧",
-    "Cold Brew": "🧊",
-    AeroPress: "🔄",
-    "Moka Pot": "🫗",
-};
-
 function djb2(str: string): number {
     let hash = 5381;
     for (let i = 0; i < str.length; i++) {
@@ -37,29 +28,21 @@ function djb2(str: string): number {
 
 interface RecipePlaceholderProps {
     recipeId: string;
-    brewMethod?: string;
     className?: string;
 }
 
 export default function RecipePlaceholder({
     recipeId,
-    brewMethod,
     className = "",
 }: RecipePlaceholderProps) {
     const hash = djb2(recipeId);
     const pair = GRADIENT_PAIRS[hash % GRADIENT_PAIRS.length];
     const direction =
         GRADIENT_DIRECTIONS[(hash >>> 4) % GRADIENT_DIRECTIONS.length];
-    const emoji = brewMethod ? (BREW_EMOJIS[brewMethod] ?? "☕") : "☕";
-
     return (
         <div
-            className={`${direction} ${pair.from} ${pair.to} flex items-center justify-center ${className}`}
+            className={`${direction} ${pair.from} ${pair.to} ${className}`}
             aria-hidden="true"
-        >
-            <span className="text-5xl opacity-70 drop-shadow-md select-none">
-                {emoji}
-            </span>
-        </div>
+        />
     );
 }
